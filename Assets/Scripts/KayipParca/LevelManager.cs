@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -59,6 +60,9 @@ namespace KayipParca
         const string CraneControls = "<size=22>VİNÇ: WASD kancayı sürer    Boşluk: tut / bırak    Z: geri al    R: yeniden</size>";
 
         enum Death { None, Hazard, Enemy, Laser, Fire, Moves }
+
+        /// Baska bir bolum sahnesinden (or. Bolum 2) donerken hangi siradan devam edilecegi. -1 = baslik ekrani.
+        public static int pendingStart = -1;
 
         struct State
         {
@@ -122,12 +126,17 @@ namespace KayipParca
             {
                 var ta = Resources.Load<TextAsset>("KayipParca/Levels/" + e.file);
                 var ld = ta ? LevelData.Parse(ta.text) : null;
-                levelNames.Add(ld != null && !string.IsNullOrEmpty(ld.name) ? ld.name : e.file);
+                levelNames.Add(ld != null && !string.IsNullOrEmpty(ld.name) ? ld.name : e.file.StartsWith("@") ? e.chapter + " (sahne)" : e.file);
                 if (ld == null || !ld.hasLost) continue;
                 if (!lostLevels.TryGetValue(e.chapterIndex, out var list)) lostLevels[e.chapterIndex] = list = new List<string>();
                 list.Add(e.file);
             }
-            if (startLevel <= 1) StartCoroutine(TitleAndIntro());
+            if (pendingStart >= 0)
+            {
+                int i = Mathf.Clamp(pendingStart, 0, entries.Count - 1); pendingStart = -1;
+                StartCoroutine(ChapterStart(i));
+            }
+            else if (startLevel <= 1) StartCoroutine(TitleAndIntro());
             else StartCoroutine(LoadLevel(Mathf.Clamp(startLevel - 1, 0, entries.Count - 1)));
         }
 
@@ -174,6 +183,14 @@ namespace KayipParca
             yield return LoadLevel(0);
         }
 
+        IEnumerator ChapterStart(int i)
+        {
+            busy = true;
+            yield return ShowScreen("Story/title", entries[i].chapter, "[Enter] Başla");
+            HideScreen();
+            yield return LoadLevel(i);
+        }
+
         IEnumerator ShowScreen(string image, string text, string prompt)
         {
             EnsureScreen();
@@ -194,7 +211,7 @@ namespace KayipParca
         void EnsureScreen()
         {
             if (screenRoot) return;
-            var canvas = (messageText ? messageText.canvas : FindFirstObjectByType<Canvas>()).transform;
+            var canvas = (messageText ? messageText.canvas : FindAnyObjectByType<Canvas>()).transform;
             screenRoot = new GameObject("HikayeEkrani", typeof(RectTransform), typeof(Image));
             screenRoot.transform.SetParent(canvas, false);
             Stretch((RectTransform)screenRoot.transform, 0, 0, 1, 1);
@@ -230,6 +247,8 @@ namespace KayipParca
         IEnumerator LoadLevel(int i)
         {
             busy = true;
+            // "@SahneAdi" satiri: o bolum ayri bir sahnede (or. @Bolum2)
+            if (entries[i].file.StartsWith("@")) { SceneManager.LoadScene(entries[i].file.Substring(1)); yield break; }
             if (!firstLoad && themes) yield return themes.FadeOut();
             firstLoad = false;
             Build(i);

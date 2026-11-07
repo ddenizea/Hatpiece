@@ -1,0 +1,18 @@
+# Bölüm 2 metinleri. Satır başındaki anahtarları değiştirmeyin; | yeni satırdır.
+INTRO1=Korsan Gemisi kutusu sarsıldı. Yamalı'nın tayfası Yama Korsanları intikam için dışarı taştı!
+INTRO2=Ejderha uyandı. Kalbi sensin: artık onu sen yönetiyorsun. Yamalara karşı havalan!
+HINT=W / S: şerit değiştir    Boşluk: ateş (basılı tutabilirsin)
+W1=Dalga 1: Yama Askerleri
+W2=Dalga 2: Yama Balonları|Oklara dikkat: balonlar şerit değiştirir!
+W3=Dalga 3: Yama Filosu|Kırmızı şerit = gemi ateş edecek!
+CLEAR=Dalga temizlendi!
+DEFEAT=Yenildin! Dalga yeniden başlıyor.
+L25=Bu yamalar... içime işliyor. Ama ateşim hızlandı!
+L50=Ateşim mora döndü ve her şeyin içinden geçiyor. Bu güç... hoşuma gitti.
+L75=Gülleleri bile yakabiliyorum! Daha fazla!
+BOSS=Yama Kaptan: "Yamalı'yı benden aldın. Şimdi sıra sende!"
+P2=Topların kapakları açılıyor!|Namlu kızarınca, ateş etmeden hemen önce vur!
+P3=Kaptan kendisi geliyor! Zayıf noktası göz yaması.|Durduğu şerit güvende.
+FINAL=Kaptan'ın göz yaması koptu...
+END=Kaptan'ın yaması ejderhanın kalbine yapıştı.|"Artık sen de bizdensin!"|Gözlerin mora döndü...
+SOON=BÖLÜM 3: YENİ YAMALI|Devam edecek...

@@ -65,6 +65,16 @@ Tüm seviyeler `Tools/solver.py` ile çözülebilir olarak doğrulandı.
 | Kalp Yerine Oturdu | En az 4 parça + Yamalı çöpe |
 | Gerçek son: Kimse Eksik Kalmasın | En az 4 parça + Yamalı kendi kutusuna |
 
+## Bölüm 2: Yama Korsanları (gerçek zamanlı)
+
+Ayrı bir sahne: `Assets/Scenes/Bolum2.unity`. Sahne otomatik kurulur, kurulmazsa menüden **Kayıp Parça > 5) Bölüm 2 Sahnesini Kur**'a basın. Bölüm 1 bitince oyun bu sahneye kendiliğinden geçer. Doğrudan test etmek için Bolum2 sahnesini açıp Play'e basın. `Bolum2 > Start At` ile istediğiniz dalgadan ya da doğrudan boss'tan başlayabilirsiniz.
+
+- **W / S:** şerit değiştir. **Boşluk:** ateş (basılı tutulabilir).
+- **3 dalga:** Yama askerleri, şerit değiştiren balonlar (ok uyarısı), gülle atan gemiler (kırmızı şerit uyarısı).
+- **Yama virüsü:** Sana değen yama +15, yakından patlattığın yama +5. Virüs seni güçlendirir: %25'te hızlı ateş, %50'de mor ve delici ateş, %75'te gülleleri vurabilir ve çift hasar verirsin.
+- **Boss, Korsan Gemisi:** (1) zırhlı toplar ard arda gülle atar, (2) toplar ateş etmeden hemen önce vurulabilir, (3) Yama Kaptan: durduğu şerit güvenlidir, zayıf noktası göz yaması. Son vuruşta yaması ejderhaya yapışır ve Bölüm 3'e geçilir.
+- Metinler: `Resources/KayipParca/Story/bolum2.txt`. Görseller: `Art/B2` (`Tools/art_bolum2.py` ile üretilir).
+
 ## Seviye dosyası biçimi
 
 ```

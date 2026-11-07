@@ -8,3 +8,5 @@ level5
 level6
 level7
 level8
+BOLUM=Bölüm 2: Yama Korsanları
+@Bolum2
