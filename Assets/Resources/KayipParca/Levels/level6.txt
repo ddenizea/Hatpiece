@@ -1,6 +1,6 @@
 NAME=Gece Koridoru
 THEME=4
-MOVES=36
+MOVES=45
 SHAPE=0000
 GOAL_G=1010
 HINT=Karanlıkta sadece etrafını görebilirsin. Çukurlara dikkat.
@@ -9,7 +9,7 @@ MAP
 ##################
 #P.#......X......#
 #..#.###.##.####.#
-#..S...#....#..X.#
+#..S...#....#L.X.#
 ##.###.#.X..#.##.#
 #....X.#.##.#....#
 #.##...S..#.##.#.#

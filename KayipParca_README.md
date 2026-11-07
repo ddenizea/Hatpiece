@@ -47,6 +47,17 @@ Tüm seviyeler `Tools/solver.py` ile çözülebilir olarak doğrulandı.
 
 **Yeni bölüm eklemek:** `Levels/bolumler.txt` dosyasına yeni bir `BOLUM=Bölüm 2: ...` satırı ekleyip altına seviye dosyalarını yazmak yeterli.
 
+## Kayıp parçalar ve 4 son
+
+1, 2, 4, 5, 6 ve 7. seviyelerde yolunu kaybetmiş gri bir parça var. Üstüne basınca seni bir kare arkadan takip eder. Düşman, lazer ya da ateş ona değerse korkup kendi yerine kaçar. Onu yanında yuvaya ulaşırsan kurtarılmış olur. Kurtarmak isteğe bağlı ama daha fazla hamle ister. Sayaç sağ üstte görünür ve kaydedilir.
+
+| Son | Koşul |
+|---|---|
+| Gizli son: Yeni Yamalı | Hiç parça kurtarılmadı |
+| Yalnız Kalp | 1-3 parça kurtarıldı |
+| Kalp Yerine Oturdu | En az 4 parça + Yamalı çöpe |
+| Gerçek son: Kimse Eksik Kalmasın | En az 4 parça + Yamalı kendi kutusuna |
+
 ## Seviye dosyası biçimi
 
 ```
@@ -59,11 +70,12 @@ ENEMY=1,7,14,7          x1,y1,x2,y2: ileri geri devriye
 LASER=6,0,S,2,1,0       duvardaki kaynak x,y, yön, açık tur, kapalı tur, faz
 FIRE=12,3,W,4,0         ateş topu çıkış karesi x,y, yön, kaç turda bir, faz
 CHEST=1,4,3             ejderhanın göğsü: açık tur, döngü, faz
-STORY= / HINT= / OUTRO= / END_T= / END_B=   metinler (| = yeni satır)
+STORY= / HINT= / OUTRO= / END_T= / END_B= / END_ALONE= / END_DARK=   metinler (| = yeni satır)
 MAP
 #  duvar   .  zemin   ,  desenli zemin   o  engel   X  tehlike   S  istasyon
 P  oyuncu  G/E  yuva  C  ayna klon  g  klon yuvası
 D  ejderha  Y  kalp/Yamalı  K  vinç kumandası  H  kanca  T  çöp kutusu  B  Yamalı'nın kutusu
+L  kayıp parça
 ```
 
 ## Dosyalar

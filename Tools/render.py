@@ -103,6 +103,7 @@ def render(path, idx):
     for e in lv.enemies: put(L(spr), (e[0], e[1]))
     p = lv.find['P']
     for lay in (f"Player/body_{lv.meta['SHAPE']}.png", 'Player/face_idle_0.png', 'Player/hat.png'): put(L(lay), p)
+    if 'L' in lv.find: put(L('Common/lost_sad.png'), lv.find['L'])
     if 'C' in lv.find:
         put(tint(L(f"Player/body_{solver.mirror(lv.meta['SHAPE'])}.png"), (143, 211, 255, 220)), lv.find['C']); put(L('Player/face_idle_0.png'), lv.find['C'])
     # crane

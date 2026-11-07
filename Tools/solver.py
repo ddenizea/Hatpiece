@@ -53,8 +53,8 @@ class Level:
         self.find = {}
         for y, r in enumerate(self.g):
             for x, c in enumerate(r):
-                if c in 'PCHKYTB': self.find[c] = (x, y)
-                if c in 'PCH': self.g[y][x] = '.'
+                if c in 'PCHKYTBL': self.find[c] = (x, y)
+                if c in 'PCHL': self.g[y][x] = '.'
         self.goals = {k[5:]: v for k, v in self.meta.items() if k.startswith('GOAL_')}
         self.crane = 'K' in self.find
         ch = self.meta.get('CHEST', '1,4,0').split(',')
@@ -119,7 +119,7 @@ def period_of(L):
     return p
 
 
-def solve(path, want_all_goals=True):
+def solve(path, want_all_goals=True, rescue=False):
     L = Level(path)
     P = L.find['P']; Cs = L.find.get('C')
     shape = L.meta['SHAPE']
@@ -146,21 +146,24 @@ def solve(path, want_all_goals=True):
         if not (1 <= x < L.W - 1 and 1 <= y < L.H - 1): return False
         return L.at(h) != 'D'
 
-    # state: (p, ps, c, cs, t%per, mode, hook, carrying, calm, ending)
-    start = (P, shape, Cs, mirror(shape) if Cs else None, 0, 0, L.find.get('H'), False, False, '')
+    LP = L.find.get('L')
+    # state: (p, ps, c, cs, t%per, mode, hook, carrying, calm, ending, follower_pos, following)
+    start = (P, shape, Cs, mirror(shape) if Cs else None, 0, 0, L.find.get('H'), False, False, '', LP, False)
     seen = {start}; q = deque([(start, 0, [])]); results = {}
     names = ['N', 'E', 'S', 'W', 'CW', 'CCW', 'WAIT']
     while q:
         st, dist, hist = q.popleft()
-        p, ps, c, cs, t, mode, hook, carry, calm, ending = st
+        p, ps, c, cs, t, mode, hook, carry, calm, ending, fp, fol = st
         for a in range(7):
             np_, nps, nc, ncs, nmode, nhook, ncarry, ncalm, nend = p, ps, c, cs, mode, hook, carry, calm, ending
+            nfp, nfol = fp, fol
             dead = False
+            moved = False
             if mode == 0:
                 if a < 4:
                     r = try_move(p, ps, a, pgoal, calm)
                     if r is None: continue
-                    np_, nps, d1 = r; dead |= d1
+                    np_, nps, d1 = r; dead |= d1; moved = True
                     if c:
                         rc = try_move(c, cs, MIRROR[a], {'g': cgoal} if cgoal else {}, calm)
                         if rc: nc, ncs, d2 = rc; dead |= d2
@@ -178,6 +181,20 @@ def solve(path, want_all_goals=True):
                         nend = 'T' if hook == L.find.get('T') else 'B'; ncarry = False; nmode = 0
                 else: continue
             nt = t + 1
+            # lost piece: trails one step behind; picked up by stepping on it
+            if moved and fol: nfp = p
+            if LP and not nfol and np_ == LP: nfol, nfp = True, LP
+            if nfol:
+                hit = False
+                for e in L.enemies:
+                    e0, e1 = enemy_pos(e, t), enemy_pos(e, nt)
+                    if e1 == nfp or (e1 == fp and e0 == nfp and fol): hit = True
+                for l in L.lasers:
+                    if laser_on(l, nt) and nfp in l['cells']: hit = True
+                if not ncalm:
+                    for f in L.fires:
+                        if fire_at(f, nt, nfp) or (fol and fire_swap(f, t, fp, nfp)): hit = True
+                if hit: nfol, nfp = False, LP
             for e in L.enemies:
                 e0, e1 = enemy_pos(e, t), enemy_pos(e, nt)
                 for old, new in ((p, np_), (c, nc)):
@@ -197,12 +214,13 @@ def solve(path, want_all_goals=True):
             win = False
             if pc in pgoal and pgoal[pc] == nps and (not c or (L.at(nc) == 'g' and ncs == cgoal)):
                 win = pc != 'Y' or (ncalm and nend != '')
+                if rescue and LP and not nfol: win = False
             if win:
                 key = (pc, nend)
                 if key not in results: results[key] = (dist + 1, hist + [names[a]])
                 if not want_all_goals: return L, results
                 continue
-            ns = (np_, nps, nc, ncs, nt % per, nmode, nhook, ncarry, ncalm, nend)
+            ns = (np_, nps, nc, ncs, nt % per, nmode, nhook, ncarry, ncalm, nend, nfp, nfol)
             if ns in seen: continue
             seen.add(ns); q.append((ns, dist + 1, hist + [names[a]]))
     return L, results
@@ -217,3 +235,8 @@ if __name__ == '__main__':
         if not res: print('   UNSOLVABLE')
         for g, (n, h) in sorted(res.items()):
             print(f'   goal {g}: {n} moves  {" ".join(h)}')
+        if 'L' in L.find:
+            _, rr = solve(os.path.join(d, f), rescue=True)
+            if not rr: print('   RESCUE UNSOLVABLE')
+            for g, (n, h) in sorted(rr.items()):
+                print(f'   rescue {g}: {n} moves  {" ".join(h)}')

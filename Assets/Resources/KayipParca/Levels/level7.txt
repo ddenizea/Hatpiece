@@ -1,6 +1,6 @@
 NAME=Kedinin Yatağı
 THEME=5
-MOVES=30
+MOVES=33
 SHAPE=1010
 GOAL_G=1111
 ENEMY=6,1,6,7
@@ -10,7 +10,7 @@ HINT=Patiler her hamlende bir kare iner. Rotalarını takip et ve yuvaya ulaş.
 STORY=Lazer ışığı kediyi uyandırdı! Yatağından geçmen gerekiyor.
 MAP
 ##################
-#P.......o.......#
+#P.......oL......#
 #........o...S...#
 #..XX....o.......#
 #.S..........XX..#

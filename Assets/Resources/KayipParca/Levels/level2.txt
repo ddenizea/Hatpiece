@@ -1,13 +1,13 @@
 NAME=Halı Ormanı
 THEME=1
-MOVES=24
+MOVES=32
 SHAPE=1000
 GOAL_G=1101
 HINT=İstasyona hangi yönden girersen O taraftaki kenar değişir. Aynı istasyona farklı yönlerden girerek birden fazla kenarı değiştirebilirsin.
 STORY=Ejderha toz canavarlarını üstüne saldı.
 MAP
 ################
-#P..X......X...#
+#P..X......XL..#
 #.o.X.,S...X.o.#
 #...X......X...#
 #.......XX.....#

@@ -263,6 +263,23 @@ def make_common():
 
 
 # ------------------------------------------------------------------ dragon (4x6 tiles)
+def make_lost():
+    GREY, LINE = hx('b8bcc4'), hx('3a3f47')
+    for kind in ('sad', 'happy'):
+        m = piece_mask('1001', body=8.0, r=2.6)
+        im = from_masks((T, T), [(m, GREY), (edge(m), LINE)])
+        d = ImageDraw.Draw(im)
+        if kind == 'sad':
+            d.point([(13, 15), (19, 15)], fill=LINE); d.point([(12, 14), (20, 14)], fill=LINE)
+            d.line([(14, 20), (18, 20)], fill=LINE); d.point([(13, 21), (19, 21)], fill=LINE)
+            d.point([(12, 17), (12, 18)], fill=hx('7fb3e0'))
+        else:
+            for x0 in (12, 18): d.point([(x0, 15), (x0 + 1, 14), (x0 + 2, 15)], fill=LINE)
+            d.line([(14, 19), (18, 19)], fill=LINE); d.point([(13, 18), (19, 18)], fill=LINE)
+            d.point([(11, 18), (21, 18)], fill=BLUSH)
+        save(im, 'Common', f'lost_{kind}.png')
+
+
 def make_digits():
     f = ImageFont.truetype(FONT_B, 15)
     for n in range(1, 10):
@@ -650,23 +667,57 @@ def make_story():
     for x in range(126, 520, 12): d.line([(x, 90), (x, 360)], fill=hx('cfa067'))
     im.alpha_composite(piece_img(face='face_idle_0', s=5), (240, 160))
     save(im, 'Story', 'intro_4.png')
-    # endings
-    for kind in ('t', 'b'):
+    # endings (4)
+    lost_h, lost_s = big(load('Common', 'lost_happy.png'), 3), big(load('Common', 'lost_sad.png'), 3)
+    def pic_with(heart, dragon='dragon_sleep'):
         im = new(640, 360); table(im)
-        im.alpha_composite(puzzle_picture(360, 240, 'dragon_sleep', heart=load('Player', 'body_1110.png')), (40, 60))
-        if kind == 't':
-            tr = big(load('Common', 'trash.png'), 5); im.alpha_composite(tr, (440, 170))
-            im.alpha_composite(big(load('Common', 'yamali.png'), 3).rotate(20, resample=Image.NEAREST, expand=True), (460, 120))
-        else:
-            bx = big(load('Common', 'pirate_box.png'), 5); im.alpha_composite(bx, (430, 190))
-            ya = load('Common', 'yamali.png'); dd = ImageDraw.Draw(ya)
-            dd.rectangle([10, 18, 22, 21], fill=hx('3b2a5c')); dd.arc([11, 15, 21, 22], 20, 160, fill=hx('ffffff'))
-            im.alpha_composite(big(ya, 3), (470, 120))
-        save(im, 'Story', f'ending_{kind}.png')
+        im.alpha_composite(puzzle_picture(360, 240, dragon, heart=heart), (40, 60))
+        return im
+    hero_heart = load('Player', 'body_1110.png')
+    # Kalp yerine oturdu: Yamali in the trash, rescued pieces cheering
+    im = pic_with(hero_heart)
+    im.alpha_composite(big(load('Common', 'trash.png'), 5), (440, 170))
+    im.alpha_composite(big(load('Common', 'yamali.png'), 3).rotate(20, resample=Image.NEAREST, expand=True), (460, 120))
+    for i, (x, y) in enumerate([(400, 255), (490, 262), (560, 250)]): im.alpha_composite(lost_h, (x, y))
+    save(im, 'Story', 'ending_t.png')
+    # Kimse eksik kalmasin: Yamali smiling at its own box, everyone together
+    im = pic_with(hero_heart)
+    im.alpha_composite(big(load('Common', 'pirate_box.png'), 5), (430, 170))
+    ya = load('Common', 'yamali.png'); dd = ImageDraw.Draw(ya)
+    dd.rectangle([10, 18, 22, 21], fill=hx('3b2a5c')); dd.arc([11, 15, 21, 22], 20, 160, fill=hx('ffffff'))
+    im.alpha_composite(big(ya, 3), (470, 100))
+    for x, y in [(395, 258), (455, 266), (515, 262), (565, 252)]: im.alpha_composite(lost_h, (x, y))
+    d = ImageDraw.Draw(im)
+    for x, y in ((450, 110), (560, 140), (420, 150)): d.line([(x - 6, y), (x + 6, y)], fill=hx('ffd23f'), width=2); d.line([(x, y - 6), (x, y + 6)], fill=hx('ffd23f'), width=2)
+    save(im, 'Story', 'ending_b.png')
+    # Yalniz kalp: picture is done, but lost pieces remain at the bottom of the box
+    im = new(640, 360, hx('6b4a2c')); d = ImageDraw.Draw(im)
+    d.rectangle([0, 0, 640, 150], fill=hx('2a1d14'))
+    im.alpha_composite(puzzle_picture(240, 160, 'dragon_sleep', heart=hero_heart), (200, 10))
+    d.rectangle([60, 190, 580, 360], fill=hx('8a6440'))
+    for x in range(66, 580, 12): d.line([(x, 190), (x, 360)], fill=hx('7a5636'))
+    for x, y in [(120, 260), (260, 280), (400, 250), (500, 290)]: im.alpha_composite(lost_s, (x, y))
+    a_ = np.array(im).astype(np.float32); a_[..., :3] *= np.array([0.75, 0.8, 0.95]); im = Image.fromarray(a_.clip(0, 255).astype(np.uint8))
+    save(im, 'Story', 'ending_alone.png')
+    # Yeni Yamali (secret): the hero turns jagged, a new ugly piece wakes in the dark box
+    im = new(640, 360, hx('0c0a12')); d = ImageDraw.Draw(im)
+    m = piece_mask('1110')
+    for yy in range(5, 13): m[yy] = np.roll(m[yy], 1)
+    for yy in range(19, 26): m[yy] = np.roll(m[yy], -1)
+    dark = from_masks((T, T), [(m, hx('5a3d6e')), (edge(m), hx('140c22'))])
+    dd = ImageDraw.Draw(dark)
+    dd.polygon([(10, 12), (14, 14), (10, 15)], fill=hx('ff2e4c')); dd.polygon([(22, 12), (18, 14), (22, 15)], fill=hx('ff2e4c'))
+    dd.line([(11, 20), (21, 20)], fill=hx('140c22'))
+    dark.alpha_composite(load('Player', 'hat.png'))
+    im.alpha_composite(puzzle_picture(300, 200, 'dragon_awake', heart=dark), (40, 40))
+    im.alpha_composite(big(dark, 5).rotate(8, resample=Image.NEAREST, expand=True), (420, 150))
+    for x, y in ((360, 300), (384, 300), (560, 70), (580, 70)):
+        d.polygon([(x, y), (x + 10, y + 4), (x, y + 8)] if x in (360, 560) else [(x + 10, y), (x, y + 4), (x + 10, y + 8)], fill=hx('ff2e4c'))
+    save(im, 'Story', 'ending_dark.png')
 
 
 if __name__ == '__main__':
-    make_player(); make_ugly(); make_common(); make_digits(); make_dragon()
+    make_player(); make_ugly(); make_common(); make_lost(); make_digits(); make_dragon()
     for fn in (theme_box, theme_carpet, theme_kitchen, theme_toys, theme_night, theme_cat, theme_desk, theme_picture): fn()
     make_story()
     print('ok')

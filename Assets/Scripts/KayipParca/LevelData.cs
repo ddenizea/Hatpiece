@@ -13,7 +13,8 @@ namespace KayipParca
     ///  D  ejderha (kati)   Y  ejderhanin kalbi / Yamali
     ///  K  vinc kumandasi   H  kancanin baslangici
     ///  T  cop kutusu       B  Yamali'nin kendi kutusu
-    /// Satirlar: NAME, THEME, MOVES, SHAPE, GOAL_x, ENEMY, LASER, FIRE, CHEST, STORY, HINT, OUTRO, END_T, END_B
+    ///  L  kayip parca (ustune basinca seni takip eder; yuvaya kadar goturursen kurtarilir)
+    /// Satirlar: NAME, THEME, MOVES, SHAPE, GOAL_x, ENEMY, LASER, FIRE, CHEST, STORY, HINT, OUTRO, END_T, END_B, END_ALONE, END_DARK
     /// Sekil dizisi "NESW" sirasinda: 1 = cikinti, 0 = girinti.
     /// Kurallar Tools/solver.py ile birebir aynidir.
     /// </summary>
@@ -47,7 +48,7 @@ namespace KayipParca
             }
         }
 
-        public string name, story = "", hint = "", outro = "", endT = "", endB = "";
+        public string name, story = "", hint = "", outro = "", endT = "", endB = "", endAlone = "", endDark = "";
         public int theme, moves;
         public string shape;
         public readonly Dictionary<char, string> goals = new Dictionary<char, string>();
@@ -57,8 +58,8 @@ namespace KayipParca
         public int chestOpen = 1, chestCycle = 4, chestPhase;
         public char[,] grid;
         public int width, height;
-        public Vector2Int playerStart, cloneStart, hookStart, console, yamali, trash, box;
-        public bool hasClone, hasCrane, hasDragon;
+        public Vector2Int playerStart, cloneStart, hookStart, console, yamali, trash, box, lostStart;
+        public bool hasClone, hasCrane, hasDragon, hasLost;
         public RectInt dragonRect;
 
         public char At(Vector2Int p) =>
@@ -94,6 +95,8 @@ namespace KayipParca
                     case "OUTRO": d.outro = v; break;
                     case "END_T": d.endT = v; break;
                     case "END_B": d.endB = v; break;
+                    case "END_ALONE": d.endAlone = v; break;
+                    case "END_DARK": d.endDark = v; break;
                     case "ENEMY":
                         d.enemies.Add(new EnemyPath { a = new Vector2Int(int.Parse(n[0]), int.Parse(n[1])), b = new Vector2Int(int.Parse(n[2]), int.Parse(n[3])) });
                         break;
@@ -125,6 +128,7 @@ namespace KayipParca
                         case 'P': d.playerStart = p; c = '.'; break;
                         case 'C': d.hasClone = true; d.cloneStart = p; c = '.'; break;
                         case 'H': d.hookStart = p; c = '.'; break;
+                        case 'L': d.hasLost = true; d.lostStart = p; c = '.'; break;
                         case 'K': d.hasCrane = true; d.console = p; break;
                         case 'Y': d.yamali = p; break;
                         case 'T': d.trash = p; break;

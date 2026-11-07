@@ -58,7 +58,14 @@ namespace KayipParca
         {
             public Vector2Int p, c, hook; public string ps, cs; public int t, moves;
             public bool crane, carrying, calm; public char ending;
+            public Vector2Int f; public bool following;   // kayip parca
         }
+
+        // kurtarilan kayip parcalar (bolum boyunca birikir, PlayerPrefs'e kaydedilir)
+        const string RescuedKey = "hatpiece_rescued";
+        static readonly HashSet<string> rescued = new HashSet<string>();
+        readonly Dictionary<int, List<string>> lostLevels = new Dictionary<int, List<string>>();
+        SpriteRenderer lostSr;
 
         // akis
         List<Chapters.Entry> entries;
@@ -95,6 +102,14 @@ namespace KayipParca
             }
             cam = Camera.main;
             entries = Chapters.Load();
+            LoadRescued();
+            foreach (var e in entries)
+            {
+                var ta = Resources.Load<TextAsset>("KayipParca/Levels/" + e.file);
+                if (ta == null || !LevelData.Parse(ta.text).hasLost) continue;
+                if (!lostLevels.TryGetValue(e.chapterIndex, out var list)) lostLevels[e.chapterIndex] = list = new List<string>();
+                list.Add(e.file);
+            }
             if (startLevel <= 1) StartCoroutine(TitleAndIntro());
             else StartCoroutine(LoadLevel(Mathf.Clamp(startLevel - 1, 0, entries.Count - 1)));
         }
@@ -127,6 +142,7 @@ namespace KayipParca
         IEnumerator TitleAndIntro()
         {
             busy = true;
+            rescued.Clear(); SaveRescued();   // yeni oyun
             yield return ShowScreen("Story/title", entries[0].chapter, "[Enter] Başla");
             var ta = Resources.Load<TextAsset>("KayipParca/Story/intro");
             if (ta != null)
@@ -227,7 +243,7 @@ namespace KayipParca
             floorMap.ClearAllTiles(); wallMap.ClearAllTiles(); decorMap.ClearAllTiles(); shadowMap.ClearAllTiles();
             for (int k = objectsRoot.childCount - 1; k >= 0; k--) Destroy(objectsRoot.GetChild(k).gameObject);
             enemyViews.Clear(); nextFrames.Clear(); laserCells.Clear(); fireWarns.Clear(); fireballs.Clear(); slots.Clear();
-            dragon = chestCover = chestGlow = yamaliSr = heartSlot = trolley = cable = hook = countdown = null;
+            dragon = chestCover = chestGlow = yamaliSr = heartSlot = trolley = cable = hook = countdown = lostSr = null;
 
             for (int y = 0; y < data.height; y++)
                 for (int x = 0; x < data.width; x++)
@@ -292,6 +308,13 @@ namespace KayipParca
                 yamaliSr.gameObject.AddComponent<SpriteAnim>().follow = true;
                 // kafanin ustunde: bir sonraki atese kalan tur
                 if (data.fires.Count > 0) countdown = MakeSprite("GeriSayim", "Common/num_1", World(new Vector2Int(r.x, Mathf.Max(0, r.y - 1))), Color.white, 11);
+            }
+
+            // kayip parca
+            if (data.hasLost)
+            {
+                lostSr = MakeSprite("KayipParca", "Common/lost_sad", World(data.lostStart), Color.white, 6);
+                lostSr.gameObject.AddComponent<SpriteAnim>().follow = true;
             }
 
             // vinc
@@ -381,7 +404,8 @@ namespace KayipParca
             {
                 p = data.playerStart, ps = data.shape,
                 c = data.cloneStart, cs = data.hasClone ? Shape.Mirror(data.shape) : null,
-                hook = data.hookStart, t = 0, moves = data.moves
+                hook = data.hookStart, t = 0, moves = data.moves,
+                f = data.lostStart, following = false
             };
             foreach (var fb in fireballs.Values) if (fb) Destroy(fb.gameObject);
             fireballs.Clear();
@@ -418,7 +442,7 @@ namespace KayipParca
         {
             var n = s;
             var death = Death.None;
-            bool burned = false, grabbed = false, dropped = false;
+            bool burned = false, grabbed = false, dropped = false, moved = false, picked = false, scared = false;
             if (!s.crane)
             {
                 if (a < 4)
@@ -427,7 +451,7 @@ namespace KayipParca
                     {
                         player.Bump(Shape.Dirs[a]); Play(sfxBump); return;   // carpmak hamle harcamaz
                     }
-                    n.p = np; n.ps = nps; if (pd) death = Death.Hazard;
+                    n.p = np; n.ps = nps; moved = true; if (pd) death = Death.Hazard;
                     if (data.hasClone)
                     {
                         int ma = Shape.MirrorDir[a];
@@ -481,6 +505,24 @@ namespace KayipParca
                     if (f.At(n.t, n.p) || f.Swap(s.t, s.p, n.p)) death = Death.Fire;
                     if (n.crane && !n.carrying && (f.At(n.t, n.hook) || f.Swap(s.t, s.hook, n.hook))) { n.hook = data.hookStart; burned = true; }
                 }
+            // kayip parca: bir kare arkadan izler; ustune basinca alinir; tehlike degerse yerine kacar
+            if (data.hasLost)
+            {
+                if (moved && s.following) n.f = s.p;
+                if (!s.following && n.p == data.lostStart) { n.following = true; n.f = data.lostStart; picked = true; }
+                if (n.following)
+                {
+                    bool hit = false;
+                    foreach (var e in data.enemies)
+                    {
+                        var e0 = LevelData.EnemyPos(e, s.t); var e1 = LevelData.EnemyPos(e, n.t);
+                        if (e1 == n.f || (s.following && e1 == s.f && e0 == n.f)) hit = true;
+                    }
+                    foreach (var l in data.lasers) if (l.IsOn(n.t) && l.cells.Contains(n.f)) hit = true;
+                    if (!n.calm) foreach (var fl in data.fires) if (fl.At(n.t, n.f) || (s.following && fl.Swap(s.t, s.f, n.f))) hit = true;
+                    if (hit) { n.following = false; n.f = data.lostStart; scared = true; picked = false; }
+                }
+            }
             if (!n.crane && data.hasCrane && !n.calm && data.At(n.p) == 'K') { n.crane = true; n.hook = data.hookStart; }
 
             history.Push(s);
@@ -489,6 +531,8 @@ namespace KayipParca
             if (s.crane && !history.Peek().crane) Flash("Vinç senin kontrolünde! Ejderhanın göğsü açılınca Yamalı'yı yakala.");
             if (burned) { Play(sfxFire); Flash("Halat yandı! Kanca başa döndü."); }
             if (grabbed) { Play(sfxGrab); Flash("Yamalı'yı yakaladın! Ejderha sakinleşti. Onu nereye bırakacaksın?"); }
+            if (picked) Flash("Kayıp parça seni takip ediyor! Onu yuvaya kadar götür.");
+            if (scared) { Play(sfxBump); Flash("Kayıp parça korktu ve yerine kaçtı!"); }
             if (dropped) Flash(s.ending == 'T' ? "Yamalı çöpe gitti. Şimdi kalbin yerine otur!" : "Yamalı kendi kutusuna döndü. Şimdi kalbin yerine otur!");
 
             if (death != Death.None) { StartCoroutine(Die(death)); return; }
@@ -534,9 +578,20 @@ namespace KayipParca
             }
             UpdateFire(snap);
             UpdateDragonAndCrane(snap);
+            if (lostSr)
+            {
+                lostSr.sprite = SpriteBank.Get(s.following ? "Common/lost_happy" : "Common/lost_sad");
+                var la = lostSr.GetComponent<SpriteAnim>(); la.target = World(s.f);
+                if (snap || !s.following) lostSr.transform.position = World(s.f);
+            }
             foreach (var (sr, key) in slots)
                 if (sr) sr.color = key == 'g' ? (s.cs == data.goals['g'] ? MatchColor : CloneColor) : (s.ps == data.goals[key] ? MatchColor : SlotColor);
-            if (movesText) movesText.text = $"Hamle: {s.moves}";
+            if (movesText)
+            {
+                movesText.verticalOverflow = VerticalWrapMode.Overflow;
+                int total = LostTotal();
+                movesText.text = $"Hamle: {s.moves}" + (total > 0 ? $"\n<size=30>Kurtarılan: {RescuedCount()}/{total}</size>" : "");
+            }
             if (hudNow) hudNow.sprite = SpriteBank.Get($"Player/body_{s.ps}");
             if (hintText)
             {
@@ -650,17 +705,20 @@ namespace KayipParca
             Play(sfxFit);
             yield return new WaitForSeconds(0.35f);
             Play(sfxWin);
-            ShowMessage("Tık!" + (string.IsNullOrEmpty(data.outro) ? "" : "\n<size=34>" + data.outro + "</size>"));
+            bool saved = data.hasLost && s.following;
+            if (saved) { rescued.Add(entries[index].file); SaveRescued(); ApplyVisuals(snap: false); }
+            ShowMessage("Tık!" + (saved ? "\n<size=34>Kayıp parçayı kurtardın!</size>" : "") + (string.IsNullOrEmpty(data.outro) ? "" : "\n<size=34>" + data.outro + "</size>"));
             yield return new WaitForSeconds(string.IsNullOrEmpty(data.outro) ? 0.8f : 2.6f);
 
-            bool hasEnding = s.ending != '\0' && !string.IsNullOrEmpty(s.ending == 'T' ? data.endT : data.endB);
+            PickEnding(out string endText, out string endImg);
+            bool hasEnding = endText != null;
             bool lastOfChapter = index + 1 >= entries.Count || entries[index + 1].chapterIndex != entries[index].chapterIndex;
             if (hasEnding || lastOfChapter)
             {
                 ShowMessage("");
                 if (themes) yield return themes.FadeOut();
-                string text = hasEnding ? (s.ending == 'T' ? data.endT : data.endB) : entries[index].chapter + "|tamamlandı!";
-                string img = hasEnding ? (s.ending == 'T' ? "Story/ending_t" : "Story/ending_b") : "Story/title";
+                string text = hasEnding ? endText : entries[index].chapter + "|tamamlandı!";
+                string img = hasEnding ? endImg : "Story/title";
                 yield return ShowScreen(img, text, "[Enter] devam");
                 if (index + 1 < entries.Count)
                 {
@@ -679,6 +737,36 @@ namespace KayipParca
             }
             yield return LoadLevel(index + 1);
         }
+
+        /// 4 son: hic parca kurtarilmadiysa gizli son; az kurtarildiysa yalniz kalp; coksa Yamali'nin nereye birakildigina gore.
+        void PickEnding(out string text, out string img)
+        {
+            text = img = null;
+            if (s.ending == '\0') return;
+            int r = RescuedCount(), total = LostTotal();
+            int need = Mathf.CeilToInt(total * 2f / 3f);
+            if (total > 0 && r == 0 && !string.IsNullOrEmpty(data.endDark)) { text = data.endDark; img = "Story/ending_dark"; }
+            else if (total > 0 && r < need && !string.IsNullOrEmpty(data.endAlone)) { text = data.endAlone; img = "Story/ending_alone"; }
+            else if (s.ending == 'T' && !string.IsNullOrEmpty(data.endT)) { text = data.endT; img = "Story/ending_t"; }
+            else if (s.ending == 'B' && !string.IsNullOrEmpty(data.endB)) { text = data.endB; img = "Story/ending_b"; }
+            if (text != null && total > 0) text += $"||Kurtarılan parçalar: {r}/{total}";
+        }
+
+        int LostTotal() => entries != null && lostLevels.TryGetValue(entries[index].chapterIndex, out var l) ? l.Count : 0;
+        int RescuedCount()
+        {
+            if (entries == null || !lostLevels.TryGetValue(entries[index].chapterIndex, out var l)) return 0;
+            int n = 0; foreach (var f in l) if (rescued.Contains(f)) n++;
+            return n;
+        }
+
+        static void LoadRescued()
+        {
+            rescued.Clear();
+            foreach (var f in PlayerPrefs.GetString(RescuedKey, "").Split(',')) if (f.Length > 0) rescued.Add(f);
+        }
+
+        static void SaveRescued() { PlayerPrefs.SetString(RescuedKey, string.Join(",", rescued)); PlayerPrefs.Save(); }
 
         // ------------------------------------------------------------------ sekil gostergesi (Sen / Hedef)
         void SetupShapeHud()
