@@ -7,8 +7,8 @@ Tur bazlı, ızgara üzerinde oynanan bir bulmaca. Önce PC için, klavyeyle.
 
 1. Unity Hub'da bir URP projesi açın. Universal 2D ya da Universal 3D şablonu olabilir.
 2. Bu paketteki `Assets` klasörünün içeriğini projenin `Assets` klasörüne kopyalayın.
-3. Unity derlemeyi bitirince kurulum kendiliğinden yapılır: 2D ışık renderer'ı bağlanır, `Assets/Scenes/KayipParca.unity` sahnesi kurulur. Play'e basmanız yeterli.
-   Otomatik kurulum çalışmazsa üst menüden **Kayıp Parça > 3**, ardından **1** ve **2**'ye basın.
+3. Unity derlemeyi bitirince kurulum kendiliğinden yapılır: 2D ışık renderer'ı bağlanır, oyuncu prefabı (`Assets/Prefabs/KayipParca/Parca.prefab`) oluşturulur, `Assets/Scenes/KayipParca.unity` sahnesi kurulur. Play'e basmanız yeterli.
+   Otomatik kurulum çalışmazsa üst menüden **Kayıp Parça > 3**, ardından **1** ve **2**'ye basın. Oyuncu prefabı silinirse **4** onu yeniden oluşturup sahnedeki LevelManager'a bağlar.
 
 Bir ışık sahneyi etkilemiyorsa ışığın **Target Sorting Layers** ayarını "All" yapın.
 
@@ -67,6 +67,7 @@ Assets/Resources/KayipParca/
   Art/Themes/T0..T5/          Her tema: floor, floor_alt, wall, hazard, obstacle,
                               bg_far + bg_near (parallax, 640x360)
 Assets/Scripts/KayipParca/    Oyun kodu + Editor/ kurulum menüsü
+Assets/Prefabs/KayipParca/Parca.prefab   Oyuncu / ayna klon: gövde, yüz, şapka katmanları Inspector'dan bağlı
 Previews/                     Seviye çizimleri (PNG)
 Tools/solver.py               Seviye çözücü: python3 Tools/solver.py Assets/Resources/KayipParca/Levels
 Tools/art.py                  Tüm görselleri yeniden üretir: python3 Tools/art.py .

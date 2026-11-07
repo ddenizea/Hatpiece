@@ -30,6 +30,10 @@ namespace KayipParca
         public Text titleText, movesText, messageText, hintText;
         public AudioSource sfx;
 
+        [Header("Prefablar (Kurulum menusu doldurur)")]
+        [Tooltip("Oyuncu ve ayna klon bu prefabdan uretilir. Menu: Kayıp Parça > 4) Parça Prefabını Kur")]
+        public PieceView piecePrefab;
+
         [Header("Sesler (sonradan ekleyin, bos kalabilir)")]
         public AudioClip sfxMove;
         public AudioClip sfxRotate, sfxStation, sfxBump, sfxDeath, sfxFit, sfxWin;
@@ -60,6 +64,12 @@ namespace KayipParca
         // ------------------------------------------------------------------ yasam dongusu
         void Start()
         {
+            if (!piecePrefab)
+            {
+                Debug.LogError("[KayipParca] LevelManager.piecePrefab boş. Menü: Kayıp Parça > 4) Parça Prefabını Kur", this);
+                enabled = false;
+                return;
+            }
             cam = Camera.main;
             StartCoroutine(LoadLevel(startLevel));
         }
@@ -145,8 +155,8 @@ namespace KayipParca
                 enemyViews.Add(EnemyView.Create(objectsRoot, enemyPrefix, World(e.a), 5));
             }
 
-            player = PieceView.Create(objectsRoot, data.shape, true, Color.white, 6);
-            clone = data.hasClone ? PieceView.Create(objectsRoot, Shape.Mirror(data.shape), false, new Color(.56f, .83f, 1f, .85f), 6) : null;
+            player = PieceView.Create(piecePrefab, objectsRoot, data.shape, true, Color.white, 6);
+            clone = data.hasClone ? PieceView.Create(piecePrefab, objectsRoot, Shape.Mirror(data.shape), false, new Color(.56f, .83f, 1f, .85f), 6) : null;
 
             SetupCameraAndBackground(key);
             ResetState();

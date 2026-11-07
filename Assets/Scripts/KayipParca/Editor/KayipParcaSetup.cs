@@ -138,6 +138,71 @@ namespace KayipParca.EditorTools
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
+        // ------------------------------------------------------------------ parca prefabi
+        const string PrefabDir = "Assets/Prefabs/KayipParca";
+        const string PiecePrefabPath = PrefabDir + "/Parca.prefab";
+
+        [MenuItem("Kayıp Parça/4) Parça Prefabını Kur")]
+        public static void SetupPiecePrefab()
+        {
+            var prefab = EnsurePiecePrefab();
+            var lm = Object.FindAnyObjectByType<LevelManager>();
+            if (!lm)
+            {
+                Debug.Log("[KayipParca] Parça prefabı hazır: " + PiecePrefabPath + " (açık sahnede LevelManager yok, elle bağlayın).");
+                return;
+            }
+            if (lm.piecePrefab != prefab)
+            {
+                Undo.RecordObject(lm, "Parça prefabını bağla");
+                lm.piecePrefab = prefab;
+                EditorUtility.SetDirty(lm);
+                EditorSceneManager.MarkSceneDirty(lm.gameObject.scene);
+                EditorSceneManager.SaveScene(lm.gameObject.scene);
+            }
+            Debug.Log("[KayipParca] Parça prefabı hazır ve LevelManager'a bağlı: " + PiecePrefabPath);
+        }
+
+        /// <summary>
+        /// Govde + yuz + sapka katmanli parca prefabini (yoksa) olusturur ve PieceView'in
+        /// [SerializeField] alanlarini baglar. Sapka spriti prefabda durur; kod yalnizca govde/yuz spritini degistirir.
+        /// </summary>
+        public static PieceView EnsurePiecePrefab()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<PieceView>(PiecePrefabPath);
+            if (existing) return existing;
+
+            if (!AssetDatabase.IsValidFolder("Assets/Prefabs")) AssetDatabase.CreateFolder("Assets", "Prefabs");
+            if (!AssetDatabase.IsValidFolder(PrefabDir)) AssetDatabase.CreateFolder("Assets/Prefabs", "KayipParca");
+
+            var root = new GameObject("Parca");
+            var view = root.AddComponent<PieceView>();
+            SpriteRenderer Layer(string n, int order, string sprite)
+            {
+                var go = new GameObject(n);
+                go.transform.SetParent(root.transform, false);
+                var sr = go.AddComponent<SpriteRenderer>();
+                sr.sortingOrder = order;
+                sr.sprite = AssetDatabase.LoadAssetAtPath<Sprite>($"{ArtPath}/{sprite}.png");
+                if (!sr.sprite) Debug.LogWarning($"[KayipParca] Prefab için sprite bulunamadı: {sprite}. Önce 1) Görsel Ayarlarını Uygula.");
+                return sr;
+            }
+            var body = Layer("Govde", 6, "Player/body_1000");
+            var face = Layer("Yuz", 7, "Player/face_idle_0");
+            var hat = Layer("Sapka", 8, "Player/hat");
+
+            var so = new SerializedObject(view);
+            so.FindProperty("body").objectReferenceValue = body;
+            so.FindProperty("face").objectReferenceValue = face;
+            so.FindProperty("hat").objectReferenceValue = hat;
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            var asset = PrefabUtility.SaveAsPrefabAsset(root, PiecePrefabPath);
+            Object.DestroyImmediate(root);
+            Debug.Log("[KayipParca] Parça prefabı oluşturuldu: " + PiecePrefabPath);
+            return asset.GetComponent<PieceView>();
+        }
+
         [MenuItem("Kayıp Parça/2) Oyun Sahnesini Kur")]
         public static void BuildScene()
         {
@@ -242,6 +307,7 @@ namespace KayipParca.EditorTools
             lm.bgFar = bgFar; lm.bgNear = bgNear;
             lm.titleText = title; lm.movesText = moves; lm.messageText = msg; lm.hintText = hint;
             lm.sfx = sfx;
+            lm.piecePrefab = EnsurePiecePrefab();
 
             Directory.CreateDirectory("Assets/Scenes");
             EditorSceneManager.SaveScene(scene, ScenePath);

@@ -1,12 +1,19 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace KayipParca
 {
-    /// <summary>Oyuncu (veya ayna klon) parcasi: govde + yuz + sapka katmanlari.</summary>
+    /// <summary>
+    /// Oyuncu (veya ayna klon) parcasi: govde + yuz + sapka katmanlari.
+    /// Katmanlar kodla uretilmez; Parca prefabinda Inspector'dan baglanir
+    /// (Kayıp Parça > 4) Parça Prefabını Kur menusu prefabi olusturur).
+    /// </summary>
     public class PieceView : MonoBehaviour
     {
-        SpriteRenderer body, face, hat;
+        [Header("Katmanlar (prefab uzerinde baglanir)")]
+        [SerializeField] SpriteRenderer body;
+        [SerializeField] SpriteRenderer face;
+        [SerializeField] SpriteRenderer hat;
+
         Vector3 target;
         Vector3 punch;
         float scalePunch;
@@ -14,28 +21,19 @@ namespace KayipParca
         int faceMode; // 0 idle, 1 happy, 2 dead
         static readonly int[] blinkSeq = { 0, 2, 3, 2, 0 };
 
-        public static PieceView Create(Transform parent, string shape, bool withHat, Color tint, int order)
+        /// <summary>Prefabdan bir parca uretir. Ayna klon icin sapka kapatilir.</summary>
+        public static PieceView Create(PieceView prefab, Transform parent, string shape, bool withHat, Color tint, int order)
         {
-            var go = new GameObject(withHat ? "Oyuncu" : "AynaKlon");
-            go.transform.SetParent(parent, false);
-            var v = go.AddComponent<PieceView>();
-            v.body = MakeLayer(go.transform, "Govde", order, tint);
-            v.face = MakeLayer(go.transform, "Yuz", order + 1, Color.white);
-            if (withHat) v.hat = MakeLayer(go.transform, "Sapka", order + 2, Color.white);
-            if (v.hat) v.hat.sprite = SpriteBank.Get("Player/hat");
+            var v = Instantiate(prefab, parent);
+            v.name = withHat ? "Oyuncu" : "AynaKlon";
+            v.body.sortingOrder = order;
+            v.face.sortingOrder = order + 1;
+            v.hat.sortingOrder = order + 2;
+            v.body.color = tint;
+            v.hat.gameObject.SetActive(withHat);
             v.SetShape(shape);
             v.face.sprite = SpriteBank.Get("Player/face_idle_0");
             return v;
-        }
-
-        static SpriteRenderer MakeLayer(Transform p, string n, int order, Color c)
-        {
-            var go = new GameObject(n);
-            go.transform.SetParent(p, false);
-            var sr = go.AddComponent<SpriteRenderer>();
-            sr.sortingOrder = order;
-            sr.color = c;
-            return sr;
         }
 
         public void SetShape(string s) => body.sprite = SpriteBank.Get($"Player/body_{s}");
@@ -63,10 +61,10 @@ namespace KayipParca
                 int f = cyc < 2.6f ? 0 : blinkSeq[Mathf.Min(blinkSeq.Length - 1, (int)((cyc - 2.6f) / 0.08f))];
                 face.sprite = SpriteBank.Get($"Player/face_idle_{f}");
             }
-            // hafif nefes alma
+            // hafif nefes alma yalnizca yuzde; sapka govdeye gore sabit durur (yalnizca carpma itmesini izler)
             float breathe = Mathf.Sin(animTime * 2.2f) * 0.02f;
             face.transform.localPosition = new Vector3(0, breathe, 0) + punch;
-            if (hat) hat.transform.localPosition = new Vector3(0, breathe * 1.5f, 0) + punch;
+            hat.transform.localPosition = punch;
         }
     }
 }
