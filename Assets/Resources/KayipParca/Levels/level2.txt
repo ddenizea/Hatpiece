@@ -1,0 +1,16 @@
+NAME=Halı Ormanı
+THEME=1
+MOVES=24
+SHAPE=1000
+GOAL_G=1101
+HINT=İstasyona hangi yönden girersen O taraftaki kenar değişir. Aynı istasyona farklı yönlerden girerek birden fazla kenarı değiştirebilirsin.
+MAP
+################
+#P..X......X...#
+#.o.X.,S...X.o.#
+#...X......X...#
+#.......XX.....#
+#..S.......,.G.#
+#,..XXX....XX..#
+#..............#
+################

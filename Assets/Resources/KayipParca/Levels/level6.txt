@@ -1,0 +1,20 @@
+NAME=Kedinin Yatağı
+THEME=5
+MOVES=34
+SHAPE=1010
+GOAL_G=1111
+GOAL_E=0000
+ENEMY=6,1,6,7
+ENEMY=11,7,11,1
+ENEMY=16,7,1,7
+HINT=Kedi uyanık. İki yuva var: hangisine oturacağını sen seç.
+MAP
+##################
+#P.......o.......#
+#........o...S...#
+#..XX....o.......#
+#.S..........XX..#
+#....X....X......#
+#E.....o.....S..G#
+#................#
+##################

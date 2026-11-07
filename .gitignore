@@ -1,0 +1,59 @@
+# Unity tarafından üretilen klasörler
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+
+# Asset Store araçları
+/[Aa]ssets/AssetStoreTools*
+
+# Unity Hub / IDE dosyaları
+.vs/
+.vscode/
+.idea/
+.gradle/
+ExportedObj/
+.consulo/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Unity'nin otomatik ürettiği meta (pdb/mdb)
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+
+# Crash raporları
+sysinfo.txt
+
+# Build çıktıları
+*.apk
+*.aab
+*.unitypackage
+*.app
+*.exe
+
+# Burst / Crashlytics
+/[Aa]ssets/[Ss]treamingAssets/aa.meta
+/[Aa]ssets/[Ss]treamingAssets/aa/*
+crashlytics-build.properties
+
+# macOS / Windows
+.DS_Store
+Thumbs.db

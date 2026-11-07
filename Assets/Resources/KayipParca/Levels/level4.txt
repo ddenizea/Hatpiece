@@ -1,0 +1,18 @@
+NAME=Oyuncak Kalesi
+THEME=3
+MOVES=26
+SHAPE=1010
+GOAL_G=1110
+ENEMY=1,7,14,7
+ENEMY=8,1,8,6
+HINT=Çirkin parçalar her hamlende bir kare yürür. Rotalarını noktalardan takip et.
+MAP
+################
+#P....#........#
+#.....#..o..o..#
+#..S..#........#
+#.....o....X...#
+#..........X.G.#
+#.o..o.....X...#
+#..............#
+################
