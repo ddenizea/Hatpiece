@@ -21,6 +21,7 @@ namespace KayipParca
     ///  - Lazer, ates, dusman ve tehlike karesi parcayi parcalar -> seviye basina donulur
     ///  - Vinc kumandasi (K) kontrolu kancaya verir; ejderhanin gogsu acikken Yamali'yi yakala
     ///  - Z: geri al, R: seviyeyi yeniden baslat
+    ///  - Hileler (cheats acikken): N sonraki, B onceki, G seviyeyi gecmis say, 1-9 o seviyeye git, Tab seviye listesi
     /// </summary>
     public class LevelManager : MonoBehaviour
     {
@@ -45,6 +46,10 @@ namespace KayipParca
         [Range(1, 20)] public int startLevel = 1;
         [Tooltip("Kamera oyuncuya dogru ne kadar kaysin (parallax icin)")]
         public float cameraDrift = 0.12f;
+
+        [Header("Hileler")]
+        [Tooltip("Açıkken: N sonraki seviye, B önceki seviye, G seviyeyi geçmiş say, 1-9 o seviyeye git, Tab tıklanabilir seviye listesi. Oyunu dağıtmadan önce kapatın.")]
+        public bool cheats = true;
 
         public static readonly string[] ThemeKeys = { "T0_Kutu", "T1_Hali", "T2_Mutfak", "T3_Oyuncak", "T4_Gece", "T5_Kedi", "T6_Masa", "T7_Resim" };
         static readonly Color SlotColor = new Color(1f, .82f, .25f), MatchColor = new Color(.45f, 1f, .55f), CloneColor = new Color(.56f, .83f, 1f);
@@ -91,6 +96,13 @@ namespace KayipParca
         Image hudNow, hudGoal, hudGoal2;
         GameObject screenRoot; Image screenPic; Text screenText, screenPrompt;
 
+        // hileler
+        const int CheatNext = 100, CheatPrev = 101, CheatWin = 102, CheatMenu = 103;
+        readonly List<string> levelNames = new List<string>();
+        bool cheatMenu;
+        Vector2 cheatScroll;
+        GUIStyle cheatLabel, cheatButton;
+
         // ------------------------------------------------------------------ yasam dongusu
         void Start()
         {
@@ -106,7 +118,9 @@ namespace KayipParca
             foreach (var e in entries)
             {
                 var ta = Resources.Load<TextAsset>("KayipParca/Levels/" + e.file);
-                if (ta == null || !LevelData.Parse(ta.text).hasLost) continue;
+                var ld = ta ? LevelData.Parse(ta.text) : null;
+                levelNames.Add(ld != null && !string.IsNullOrEmpty(ld.name) ? ld.name : e.file);
+                if (ld == null || !ld.hasLost) continue;
                 if (!lostLevels.TryGetValue(e.chapterIndex, out var list)) lostLevels[e.chapterIndex] = list = new List<string>();
                 list.Add(e.file);
             }
@@ -116,6 +130,7 @@ namespace KayipParca
 
         void Update()
         {
+            if (cheats && entries != null && HandleCheats()) return;
             int a = ReadAction();
             if (a < 0) return;
             if (inScreen) { if (a == 8) screenNext = true; if (a == 10) screenSkip = true; return; }
@@ -123,9 +138,6 @@ namespace KayipParca
             if (a <= 5 || a == 8) Step(a);
             else if (a == 6) Undo();
             else if (a == 7) { Play(sfxBump); ResetState(); }
-#if UNITY_EDITOR
-            else if (a == 9) StartCoroutine(LoadLevel((index + 1) % entries.Count));
-#endif
         }
 
         void LateUpdate()
@@ -852,10 +864,92 @@ namespace KayipParca
             return sr;
         }
 
+        // ------------------------------------------------------------------ hileler
+        /// Bir hile tusu basildiysa isler ve true doner (o karede normal girdi okunmaz).
+        bool HandleCheats()
+        {
+            int c = ReadCheat();
+            if (c < 0) return false;
+            bool loaded = data != null;   // baslik ekraninda henuz seviye yok
+            if (c == CheatMenu) cheatMenu = !cheatMenu;
+            else if (c == CheatNext) CheatJump(loaded ? index + 1 : 0);
+            else if (c == CheatPrev) CheatJump(loaded ? index - 1 : entries.Count - 1);
+            else if (c == CheatWin) { if (loaded && !busy && !inScreen) StartCoroutine(Win()); }
+            else if (c < entries.Count) CheatJump(c);
+            return true;
+        }
+
+        /// Hikaye ekranlarini, olum/kazanma animasyonunu yarida keser ve dogrudan seviyeye gider. Bastan/sondan tasar.
+        void CheatJump(int i)
+        {
+            int n = entries.Count;
+            i = (i % n + n) % n;
+            StopAllCoroutines(); flashing = null;
+            inScreen = false; HideScreen();
+            cheatMenu = false;
+            StartCoroutine(LoadLevel(i));
+        }
+
+        /// Tab ile acilan seviye listesi (IMGUI: sahnede nesne uretmez).
+        void OnGUI()
+        {
+            if (!cheats || !cheatMenu || entries == null) return;
+            if (cheatLabel == null)
+            {
+                cheatLabel = new GUIStyle(GUI.skin.label) { fontSize = 16, fontStyle = FontStyle.Bold };
+                cheatButton = new GUIStyle(GUI.skin.button) { fontSize = 15, alignment = TextAnchor.MiddleLeft, padding = new RectOffset(10, 10, 6, 6) };
+            }
+            float scale = Screen.height / 720f;
+            GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1));
+            GUILayout.BeginArea(new Rect(16, 16, 300, 720 - 32), GUI.skin.box);
+            GUILayout.Label("HİLELER   (Tab: kapat)", cheatLabel);
+            cheatScroll = GUILayout.BeginScrollView(cheatScroll);
+            int chapter = -1;
+            for (int i = 0; i < entries.Count; i++)
+            {
+                if (entries[i].chapterIndex != chapter) { chapter = entries[i].chapterIndex; GUILayout.Label(entries[i].chapter, cheatLabel); }
+                GUI.color = data != null && i == index ? new Color(1f, .82f, .3f) : Color.white;
+                if (GUILayout.Button((i < 9 ? $"[{i + 1}]  " : "") + levelNames[i], cheatButton)) CheatJump(i);
+            }
+            GUI.color = Color.white;
+            GUILayout.EndScrollView();
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("[B] Önceki", cheatButton)) CheatJump(data != null ? index - 1 : entries.Count - 1);
+            if (GUILayout.Button("[N] Sonraki", cheatButton)) CheatJump(data != null ? index + 1 : 0);
+            GUILayout.EndHorizontal();
+            GUI.enabled = data != null && !busy && !inScreen;
+            if (GUILayout.Button("[G] Seviyeyi geçmiş say", cheatButton)) StartCoroutine(Win());
+            GUI.enabled = true;
+            GUILayout.EndArea();
+        }
+
+        /// -1 yok, 0-8 o seviye (1-9 tuslari), yoksa Cheat* sabitleri
+        static int ReadCheat()
+        {
+#if ENABLE_INPUT_SYSTEM
+            var k = Keyboard.current;
+            if (k == null) return -1;
+            if (k.nKey.wasPressedThisFrame) return CheatNext;
+            if (k.bKey.wasPressedThisFrame) return CheatPrev;
+            if (k.gKey.wasPressedThisFrame) return CheatWin;
+            if (k.tabKey.wasPressedThisFrame) return CheatMenu;
+            for (int i = 0; i < 9; i++)
+                if (k[Key.Digit1 + i].wasPressedThisFrame || k[Key.Numpad1 + i].wasPressedThisFrame) return i;
+#else
+            if (Input.GetKeyDown(KeyCode.N)) return CheatNext;
+            if (Input.GetKeyDown(KeyCode.B)) return CheatPrev;
+            if (Input.GetKeyDown(KeyCode.G)) return CheatWin;
+            if (Input.GetKeyDown(KeyCode.Tab)) return CheatMenu;
+            for (int i = 0; i < 9; i++)
+                if (Input.GetKeyDown(KeyCode.Alpha1 + i) || Input.GetKeyDown(KeyCode.Keypad1 + i)) return i;
+#endif
+            return -1;
+        }
+
         void ShowMessage(string m) { if (messageText) messageText.text = m; }
         void Play(AudioClip c) { if (sfx && c) sfx.PlayOneShot(c); }
 
-        /// -1 yok, 0-3 yon (N E S W), 4 saat yonu, 5 ters, 6 geri al, 7 yeniden, 8 bosluk/enter, 9 seviye atla (editor), 10 esc
+        /// -1 yok, 0-3 yon (N E S W), 4 saat yonu, 5 ters, 6 geri al, 7 yeniden, 8 bosluk/enter, 10 esc (N artik ReadCheat'te)
         static int ReadAction()
         {
 #if ENABLE_INPUT_SYSTEM
@@ -870,7 +964,6 @@ namespace KayipParca
             if (k.zKey.wasPressedThisFrame) return 6;
             if (k.rKey.wasPressedThisFrame) return 7;
             if (k.enterKey.wasPressedThisFrame || k.numpadEnterKey.wasPressedThisFrame || k.spaceKey.wasPressedThisFrame) return 8;
-            if (k.nKey.wasPressedThisFrame) return 9;
             if (k.escapeKey.wasPressedThisFrame) return 10;
 #else
             if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow)) return 0;
@@ -882,7 +975,6 @@ namespace KayipParca
             if (Input.GetKeyDown(KeyCode.Z)) return 6;
             if (Input.GetKeyDown(KeyCode.R)) return 7;
             if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter) || Input.GetKeyDown(KeyCode.Space)) return 8;
-            if (Input.GetKeyDown(KeyCode.N)) return 9;
             if (Input.GetKeyDown(KeyCode.Escape)) return 10;
 #endif
             return -1;

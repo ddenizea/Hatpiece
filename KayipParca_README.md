@@ -22,7 +22,12 @@ Bir ışık sahneyi etkilemiyorsa ışığın **Target Sorting Layers** ayarın�
 | Z | Geri al |
 | R | Seviyeyi yeniden başlat |
 | Enter / Esc | Hikâye ekranında devam / geç |
-| N | Sonraki seviye (sadece Editor'de) |
+| N / B | Hile: sonraki / önceki seviye |
+| 1-9 | Hile: o numaralı seviyeye git |
+| G | Hile: seviyeyi geçmiş say (kazanma, son ve bölüm ekranlarıyla) |
+| Tab | Hile: seviye listesi, tıklayarak seç |
+
+Hileler Editor'de ve build'de çalışır. `LevelManager > Cheats` kutusuyla kapatılır; oyunu dağıtmadan önce kapatın. Hikâye ekranındayken de seviye atlanabilir.
 
 `LevelManager > Start Level` 1 ise oyun başlık ekranı ve giriş hikâyesiyle açılır. Başka bir sayı verirsen doğrudan o seviyeden başlar (test için).
 
