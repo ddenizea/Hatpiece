@@ -10,14 +10,16 @@ using UnityEngine.InputSystem;
 namespace KayipParca
 {
     /// <summary>
-    /// Oyunun tum kurallari burada (tur bazli, izgara hareketi).
+    /// Hatpiece: oyunun tum kurallari ve akisi (tur bazli, izgara hareketi).
     /// Kurallar Tools/solver.py ile birebir aynidir; seviyeler o cozucuyle test edildi.
-    ///  - WASD / Ok tuslari: bir kare ilerle (duvara carpmak hamle harcamaz)
-    ///  - E: saat yonunde dondur, Q: saat yonunun tersine dondur (1 hamle)
-    ///  - Sekil istasyonuna (S) girerken one bakan kenarin tersine doner (cikinti <-> girinti)
-    ///  - Yuvaya (G/E) yalnizca sekil birebir uyuyorsa girilir
-    ///  - Ayna klon (C) yatayda ters hareket eder, ters doner; ikisi de yuvadaysa kazanilir
-    ///  - Her hamleden sonra dusmanlar bir kare devriye atar
+    ///  - WASD / Ok tuslari: bir kare ilerle (carpmak hamle harcamaz)
+    ///  - E / Q: dondur, Bosluk: bir tur bekle (vinc modunda: tut / birak)
+    ///  - Sekil istasyonu (S): girdigin yondeki kenar cikinti <-> girinti olur
+    ///  - Yuvaya yalnizca sekil birebir uyuyorsa girilir
+    ///  - Ayna klon (C) yatayda ters hareket eder; ikisi de yuvadaysa kazanilir
+    ///  - Her turdan sonra dusmanlar yurur, lazerler yanip soner, ates toplari ucar
+    ///  - Lazer, ates, dusman ve tehlike karesi parcayi parcalar -> seviye basina donulur
+    ///  - Vinc kumandasi (K) kontrolu kancaya verir; ejderhanin gogsu acikken Yamali'yi yakala
     ///  - Z: geri al, R: seviyeyi yeniden baslat
     /// </summary>
     public class LevelManager : MonoBehaviour
@@ -36,30 +38,51 @@ namespace KayipParca
 
         [Header("Sesler (sonradan ekleyin, bos kalabilir)")]
         public AudioClip sfxMove;
-        public AudioClip sfxRotate, sfxStation, sfxBump, sfxDeath, sfxFit, sfxWin;
+        public AudioClip sfxRotate, sfxStation, sfxBump, sfxDeath, sfxFit, sfxWin, sfxLaser, sfxFire, sfxGrab;
 
         [Header("Ayarlar")]
-        [Range(1, 6)] public int startLevel = 1;
-        public int levelCount = 6;
+        [Tooltip("1 = baslik ekrani ve giris hikayesiyle basla. Baska bir sayi = dogrudan o seviyeden (test icin).")]
+        [Range(1, 20)] public int startLevel = 1;
         [Tooltip("Kamera oyuncuya dogru ne kadar kaysin (parallax icin)")]
         public float cameraDrift = 0.12f;
 
-        public static readonly string[] ThemeKeys = { "T0_Kutu", "T1_Hali", "T2_Mutfak", "T3_Oyuncak", "T4_Gece", "T5_Kedi" };
-        static readonly string[] Accents = { "d94a3a", "f0c27a", "3b82c4", "f94144", "ffe8a3", "ff5a36" };
+        public static readonly string[] ThemeKeys = { "T0_Kutu", "T1_Hali", "T2_Mutfak", "T3_Oyuncak", "T4_Gece", "T5_Kedi", "T6_Masa", "T7_Resim" };
+        static readonly Color SlotColor = new Color(1f, .82f, .25f), MatchColor = new Color(.45f, 1f, .55f), CloneColor = new Color(.56f, .83f, 1f);
+        static readonly Color PathColor = new Color(.82f, .29f, .85f), FireColor = new Color(1f, .59f, .16f);
+        const string Controls = "<size=22>WASD / Oklar: hareket    Q / E: döndür    Boşluk: bekle    Z: geri al    R: yeniden</size>";
+        const string CraneControls = "<size=22>VİNÇ: WASD kancayı sürer    Boşluk: tut / bırak    Z: geri al    R: yeniden</size>";
 
-        struct State { public Vector2Int p, c; public string ps, cs; public int t, moves; }
+        enum Death { None, Hazard, Enemy, Laser, Fire, Moves }
 
+        struct State
+        {
+            public Vector2Int p, c, hook; public string ps, cs; public int t, moves;
+            public bool crane, carrying, calm; public char ending;
+        }
+
+        // akis
+        List<Chapters.Entry> entries;
+        int index;                       // entries icindeki sira
+        bool busy = true, inScreen, screenNext, screenSkip, firstLoad = true;
+
+        // seviye
         LevelData data;
         State s;
         readonly Stack<State> history = new Stack<State>();
         PieceView player, clone;
         readonly List<EnemyView> enemyViews = new List<EnemyView>();
+        readonly List<SpriteRenderer> nextFrames = new List<SpriteRenderer>();
+        readonly List<List<SpriteRenderer>> laserCells = new List<List<SpriteRenderer>>();
+        readonly List<SpriteRenderer> fireWarns = new List<SpriteRenderer>();
+        readonly Dictionary<long, SpriteAnim> fireballs = new Dictionary<long, SpriteAnim>();
+        readonly List<(SpriteRenderer sr, char key)> slots = new List<(SpriteRenderer, char)>();
+        SpriteRenderer dragon, chestCover, chestGlow, yamaliSr, heartSlot, trolley, cable, hook, countdown;
         readonly Dictionary<string, Tile> tileCache = new Dictionary<string, Tile>();
-        int level;
-        bool busy, ended, firstLoad = true;
+        Tilemap shadowMap;
         Vector3 levelCenter;
         Camera cam;
         Image hudNow, hudGoal, hudGoal2;
+        GameObject screenRoot; Image screenPic; Text screenText, screenPrompt;
 
         // ------------------------------------------------------------------ yasam dongusu
         void Start()
@@ -71,88 +94,215 @@ namespace KayipParca
                 return;
             }
             cam = Camera.main;
-            StartCoroutine(LoadLevel(startLevel));
+            entries = Chapters.Load();
+            if (startLevel <= 1) StartCoroutine(TitleAndIntro());
+            else StartCoroutine(LoadLevel(Mathf.Clamp(startLevel - 1, 0, entries.Count - 1)));
         }
 
         void Update()
         {
             int a = ReadAction();
             if (a < 0) return;
-            if (ended) { if (a == 8) { ended = false; StartCoroutine(LoadLevel(1)); } return; }
+            if (inScreen) { if (a == 8) screenNext = true; if (a == 10) screenSkip = true; return; }
             if (busy) return;
-            if (a <= 5) Step(a);
+            if (a <= 5 || a == 8) Step(a);
             else if (a == 6) Undo();
             else if (a == 7) { Play(sfxBump); ResetState(); }
 #if UNITY_EDITOR
-            else if (a == 9) StartCoroutine(LoadLevel(level % levelCount + 1));
+            else if (a == 9) StartCoroutine(LoadLevel((index + 1) % entries.Count));
 #endif
         }
 
         void LateUpdate()
         {
-            if (!cam || !player) return;
+            if (!cam || !player || inScreen) return;
             var target = levelCenter + (player.transform.position - levelCenter) * cameraDrift;
             target.z = -10;
             cam.transform.position = Vector3.Lerp(cam.transform.position, target, 1f - Mathf.Exp(-3f * Time.deltaTime));
-            if (themes) themes.FollowPlayer(player.transform.position);
+            if (themes) themes.FollowPlayer(s.crane && hook ? hook.transform.position : player.transform.position);
+            UpdateCable();
+        }
+
+        // ------------------------------------------------------------------ hikaye ekranlari
+        IEnumerator TitleAndIntro()
+        {
+            busy = true;
+            yield return ShowScreen("Story/title", entries[0].chapter, "[Enter] Başla");
+            var ta = Resources.Load<TextAsset>("KayipParca/Story/intro");
+            if (ta != null)
+            {
+                foreach (var raw in ta.text.Replace("\r", "").Split('\n'))
+                {
+                    int bar = raw.IndexOf('|');
+                    if (bar < 0) continue;
+                    yield return ShowScreen("Story/" + raw.Substring(0, bar).Trim(), raw.Substring(bar + 1).Trim(), "[Enter] devam    [Esc] geç");
+                    if (screenSkip) break;
+                }
+            }
+            HideScreen();
+            yield return LoadLevel(0);
+        }
+
+        IEnumerator ShowScreen(string image, string text, string prompt)
+        {
+            EnsureScreen();
+            screenRoot.SetActive(true);
+            screenRoot.transform.SetAsLastSibling();
+            screenPic.sprite = SpriteBank.Get(image);
+            screenPic.enabled = screenPic.sprite != null;
+            screenText.text = text.Replace("|", "\n");
+            screenPrompt.text = prompt;
+            inScreen = true; screenNext = false; screenSkip = false;
+            yield return null;
+            while (!screenNext && !screenSkip) yield return null;
+            inScreen = false;
+        }
+
+        void HideScreen() { if (screenRoot) screenRoot.SetActive(false); }
+
+        void EnsureScreen()
+        {
+            if (screenRoot) return;
+            var canvas = (messageText ? messageText.canvas : FindFirstObjectByType<Canvas>()).transform;
+            screenRoot = new GameObject("HikayeEkrani", typeof(RectTransform), typeof(Image));
+            screenRoot.transform.SetParent(canvas, false);
+            Stretch((RectTransform)screenRoot.transform, 0, 0, 1, 1);
+            screenRoot.GetComponent<Image>().color = new Color(.04f, .04f, .06f, 1f);
+            var pic = new GameObject("Resim", typeof(RectTransform), typeof(Image));
+            pic.transform.SetParent(screenRoot.transform, false);
+            Stretch((RectTransform)pic.transform, .08f, .3f, .92f, .97f);
+            screenPic = pic.GetComponent<Image>(); screenPic.preserveAspect = true;
+            screenText = MakeScreenText("Yazi", .08f, .08f, .92f, .29f, 40);
+            screenPrompt = MakeScreenText("Ipucu", .08f, .01f, .92f, .08f, 24);
+            screenPrompt.color = new Color(1f, .82f, .3f);
+        }
+
+        Text MakeScreenText(string n, float x0, float y0, float x1, float y1, int size)
+        {
+            var go = new GameObject(n, typeof(RectTransform), typeof(Text));
+            go.transform.SetParent(screenRoot.transform, false);
+            Stretch((RectTransform)go.transform, x0, y0, x1, y1);
+            var t = go.GetComponent<Text>();
+            t.font = messageText ? messageText.font : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            t.fontSize = size; t.alignment = TextAnchor.MiddleCenter; t.color = Color.white;
+            t.horizontalOverflow = HorizontalWrapMode.Wrap; t.verticalOverflow = VerticalWrapMode.Overflow;
+            return t;
+        }
+
+        static void Stretch(RectTransform rt, float x0, float y0, float x1, float y1)
+        {
+            rt.anchorMin = new Vector2(x0, y0); rt.anchorMax = new Vector2(x1, y1);
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
         }
 
         // ------------------------------------------------------------------ seviye yukleme
-        IEnumerator LoadLevel(int n)
+        IEnumerator LoadLevel(int i)
         {
             busy = true;
             if (!firstLoad && themes) yield return themes.FadeOut();
             firstLoad = false;
-            Build(n);
-            ShowMessage($"{level}. {data.name}");
+            Build(i);
+            ShowMessage($"{LevelNumber()}. {data.name}" + (string.IsNullOrEmpty(data.story) ? "" : "\n<size=34>" + data.story + "</size>"));
             if (themes) yield return themes.FadeIn(data.theme);
             busy = false;
-            yield return new WaitForSeconds(0.8f);
-            if (!busy && !ended) ShowMessage("");
+            yield return new WaitForSeconds(1.6f);
+            if (!busy && !inScreen && index == i) ShowMessage("");
         }
 
-        void Build(int n)
+        int LevelNumber()
         {
-            level = n;
-            var ta = Resources.Load<TextAsset>($"KayipParca/Levels/level{n}");
-            data = LevelData.Parse(ta.text);
-            string key = ThemeKeys[data.theme];
-            ColorUtility.TryParseHtmlString("#" + Accents[data.theme], out var accent);
+            int n = 0;
+            for (int k = 0; k <= index; k++) if (entries[k].chapterIndex == entries[index].chapterIndex) n++;
+            return n;
+        }
 
-            floorMap.ClearAllTiles(); wallMap.ClearAllTiles(); decorMap.ClearAllTiles();
-            for (int i = objectsRoot.childCount - 1; i >= 0; i--) Destroy(objectsRoot.GetChild(i).gameObject);
-            enemyViews.Clear();
+        void Build(int i)
+        {
+            index = i;
+            var ta = Resources.Load<TextAsset>("KayipParca/Levels/" + entries[i].file);
+            data = LevelData.Parse(ta.text);
+            string key = ThemeKeys[Mathf.Clamp(data.theme, 0, ThemeKeys.Length - 1)];
+            EnsureShadowMap();
+
+            floorMap.ClearAllTiles(); wallMap.ClearAllTiles(); decorMap.ClearAllTiles(); shadowMap.ClearAllTiles();
+            for (int k = objectsRoot.childCount - 1; k >= 0; k--) Destroy(objectsRoot.GetChild(k).gameObject);
+            enemyViews.Clear(); nextFrames.Clear(); laserCells.Clear(); fireWarns.Clear(); fireballs.Clear(); slots.Clear();
+            dragon = chestCover = chestGlow = yamaliSr = heartSlot = trolley = cable = hook = countdown = null;
 
             for (int y = 0; y < data.height; y++)
                 for (int x = 0; x < data.width; x++)
                 {
+                    var p = new Vector2Int(x, y);
                     char c = data.grid[x, y];
                     var cell = new Vector3Int(x, -y, 0);
-                    if (c == '#') { wallMap.SetTile(cell, GetTile(key, "wall")); continue; }
-                    floorMap.SetTile(cell, GetTile(key, c == ',' ? "floor_alt" : "floor"));
+                    if (c == '#') { wallMap.SetTile(cell, GetTile(key, "wall_" + WallBits(p))); continue; }
+                    int v = (x * 7 + y * 13) % 9;
+                    floorMap.SetTile(cell, GetTile(key, c == ',' ? "floor_alt" : v < 7 ? "floor" : "floor_" + (v - 6)));
+                    bool wt = IsWall(p + Vector2Int.down), wl = IsWall(p + Vector2Int.left);
+                    if (wt || wl) shadowMap.SetTile(cell, GetTile(null, "Common/shadow_" + (wt && wl ? "tl" : wt ? "t" : "l")));
                     if (c == 'o') decorMap.SetTile(cell, GetTile(key, "obstacle"));
                     if (c == 'X') decorMap.SetTile(cell, GetTile(key, "hazard"));
-                    if (c == 'S') MakeSprite("Istasyon", "Common/station", World(new Vector2Int(x, y)), accent, 2);
-                    if (data.goals.TryGetValue(c, out var req))
-                    {
-                        var col = c == 'E' ? new Color(.49f, .95f, .61f) : c == 'g' ? new Color(.56f, .83f, 1f) : Color.Lerp(accent, Color.white, .25f);
-                        MakeSprite("Yuva_" + c, $"Slots/slot_{req}", World(new Vector2Int(x, y)), col, 2);
-                    }
+                    if (c == 'S') MakeSprite("Istasyon", "Common/station", World(p), Color.white, 2);
+                    if (c == 'K') MakeSprite("VincKumandasi", "Common/console", World(p), Color.white, 2);
+                    if (c == 'T') MakeSprite("CopKutusu", "Common/trash", World(p), Color.white, 2);
+                    if (c == 'B') MakeSprite("KorsanKutusu", "Common/pirate_box", World(p), Color.white, 2);
+                    if (c != 'Y' && data.goals.TryGetValue(c, out var req))
+                        slots.Add((MakeSprite("Yuva_" + c, $"Slots/slot_{req}", World(p), c == 'g' ? CloneColor : SlotColor, 2), c));
                 }
 
-            // dusmanlar + rota noktalari (oyuncu nereye gidecegini gorsun)
+            // dusman rotalari: iri noktalar + donus halkasi + bir sonraki adim cercevesi
             string enemyPrefix = data.theme == 5 ? "paw" : "ugly";
-            var dotCol = accent; dotCol.a = .55f;
             foreach (var e in data.enemies)
             {
                 int len = Mathf.Abs(e.b.x - e.a.x) + Mathf.Abs(e.b.y - e.a.y);
-                for (int k = 0; k <= len * 2; k++)
-                {
-                    var p = LevelData.EnemyPos(e, k);
-                    MakeSprite("Rota", "Common/path_dot", World(p), dotCol, 1);
-                    if (k >= len) break;
-                }
+                for (int k = 1; k < len; k++) MakeSprite("Rota", "Common/path_dot", World(LevelData.EnemyPos(e, k)), PathColor, 3);
+                MakeSprite("RotaUc", "Common/path_end", World(e.a), PathColor, 3);
+                MakeSprite("RotaUc", "Common/path_end", World(e.b), PathColor, 3);
+                nextFrames.Add(MakeSprite("SonrakiAdim", "Common/next_frame", World(e.a), Color.white, 3));
                 enemyViews.Add(EnemyView.Create(objectsRoot, enemyPrefix, World(e.a), 5));
+            }
+
+            // lazerler
+            foreach (var l in data.lasers)
+            {
+                MakeSprite("LazerKaynagi", "Common/emitter_" + "NESW"[l.dir], World(l.emitter), Color.white, 4);
+                var list = new List<SpriteRenderer>();
+                foreach (var c in l.cells) list.Add(MakeSprite("Lazer", "Common/laser_h", World(c), Color.white, 4));
+                laserCells.Add(list);
+            }
+
+            // ates hatlari
+            foreach (var f in data.fires)
+            {
+                for (int k = 1; k < f.cells.Count; k++) MakeSprite("AtesYolu", "Common/path_dot", World(f.cells[k]), FireColor, 3);
+                fireWarns.Add(MakeSprite("AtesUyari", "Common/fire_warn", World(f.spawn), Color.white, 4));
+            }
+
+            // ejderha + kalp
+            if (data.hasDragon)
+            {
+                var r = data.dragonRect;
+                dragon = MakeSprite("Ejderha", "Common/dragon_awake", new Vector3(r.x + r.width / 2f, -r.y + 1 - r.height / 2f, 0), Color.white, 4);
+                dragon.transform.localScale = new Vector3(r.width / 4f, r.height / 6f, 1);
+                chestCover = MakeSprite("GogusKapagi", "Common/chest_closed", World(data.yamali), Color.white, 5);
+                chestGlow = MakeSprite("GogusIsik", "Common/chest_glow", World(data.yamali), Color.white, 6);
+                heartSlot = data.goals.TryGetValue('Y', out var hreq) ? MakeSprite("KalpYuvasi", $"Slots/slot_{hreq}", World(data.yamali), SlotColor, 5) : null;
+                if (heartSlot) slots.Add((heartSlot, 'Y'));
+                yamaliSr = MakeSprite("Yamali", "Common/yamali", World(data.yamali), Color.white, 10);
+                yamaliSr.gameObject.AddComponent<SpriteAnim>().follow = true;
+                // kafanin ustunde: bir sonraki atese kalan tur
+                if (data.fires.Count > 0) countdown = MakeSprite("GeriSayim", "Common/num_1", World(new Vector2Int(r.x, Mathf.Max(0, r.y - 1))), Color.white, 11);
+            }
+
+            // vinc
+            if (data.hasCrane)
+            {
+                for (int x = 1; x < data.width - 1; x++) MakeSprite("Ray", "Common/rail", World(new Vector2Int(x, 0)), Color.white, 9);
+                trolley = MakeSprite("Araba", "Common/trolley", World(new Vector2Int(data.hookStart.x, 0)), Color.white, 10);
+                cable = MakeSprite("Halat", "Common/cable", World(data.hookStart), Color.white, 9);
+                hook = MakeSprite("Kanca", "Common/hook", World(data.hookStart), Color.white, 10);
+                hook.gameObject.AddComponent<SpriteAnim>().follow = true;
+                trolley.gameObject.AddComponent<SpriteAnim>().follow = true;
             }
 
             player = PieceView.Create(piecePrefab, objectsRoot, data.shape, true, Color.white, 6);
@@ -160,15 +310,30 @@ namespace KayipParca
 
             SetupCameraAndBackground(key);
             ResetState();
-            if (titleText) titleText.text = $"{level}. {data.name}";
-            if (hintText)
-            {
-                hintText.horizontalOverflow = HorizontalWrapMode.Wrap;
-                hintText.verticalOverflow = VerticalWrapMode.Overflow;
-                hintText.text = (string.IsNullOrEmpty(data.hint) ? "" : data.hint + "\n") +
-                                "<size=22>WASD / Oklar: hareket    Q / E: döndür    Z: geri al    R: yeniden</size>";
-            }
-            SetupShapeHud(accent);
+            if (titleText) titleText.text = $"{entries[index].chapter}  ·  {LevelNumber()}. {data.name}";
+            SetupShapeHud();
+        }
+
+        bool IsWall(Vector2Int p) => p.x >= 0 && p.y >= 0 && p.x < data.width && p.y < data.height && data.grid[p.x, p.y] == '#';
+        bool Inside(Vector2Int p) => p.x >= 0 && p.y >= 0 && p.x < data.width && p.y < data.height;
+
+        /// duvar autotile: sol, sag, ust, alt komsu zemin mi (1) degil mi (0). (Haritada y asagi dogru artar.)
+        string WallBits(Vector2Int p)
+        {
+            var n = new[] { p + Vector2Int.left, p + Vector2Int.right, p + Vector2Int.down, p + Vector2Int.up };
+            var b = new char[4];
+            for (int k = 0; k < 4; k++) b[k] = Inside(n[k]) && !IsWall(n[k]) ? '1' : '0';
+            return new string(b);
+        }
+
+        void EnsureShadowMap()
+        {
+            if (shadowMap) return;
+            var go = new GameObject("Golgeler");
+            go.transform.SetParent(floorMap.transform.parent, false);
+            shadowMap = go.AddComponent<Tilemap>();
+            go.AddComponent<TilemapRenderer>().sortingOrder = 0;
+            var fr = floorMap.GetComponent<TilemapRenderer>(); if (fr) fr.sortingOrder = -1;
         }
 
         void SetupCameraAndBackground(string key)
@@ -188,7 +353,6 @@ namespace KayipParca
                 float sc = Mathf.Max(viewW * 1.3f / size.x, viewH * 1.3f / size.y);
                 sr.transform.localScale = new Vector3(sc, sc, 1);
                 var origin = levelCenter;
-                // kedinin kafasi yatagin arkasindan baksin
                 if (data.theme == 5 && sr == bgNear) origin.y += viewH * .43f - size.y * sc * .236f;
                 var px = sr.GetComponent<ParallaxLayer>();
                 if (!px) px = sr.gameObject.AddComponent<ParallaxLayer>();
@@ -217,22 +381,29 @@ namespace KayipParca
             {
                 p = data.playerStart, ps = data.shape,
                 c = data.cloneStart, cs = data.hasClone ? Shape.Mirror(data.shape) : null,
-                t = 0, moves = data.moves
+                hook = data.hookStart, t = 0, moves = data.moves
             };
+            foreach (var fb in fireballs.Values) if (fb) Destroy(fb.gameObject);
+            fireballs.Clear();
+            player.Restore(); if (clone) clone.Restore();
             ApplyVisuals(snap: true);
-            player.SetFace(0);
-            if (clone) clone.SetFace(0);
         }
 
         // ------------------------------------------------------------------ kurallar
         bool IsPlayerGoal(char c) => c != 'g' && data.goals.ContainsKey(c);
 
-        bool TryMove(Vector2Int pos, string shape, int dir, bool isClone, out Vector2Int np, out string ns, out bool dead)
+        bool Solid(Vector2Int q, bool calm)
+        {
+            char c = data.At(q);
+            if (c == '#' || c == 'o' || c == 'T' || c == 'B') return true;
+            return (c == 'D' || c == 'Y') && !calm;
+        }
+
+        bool TryMove(Vector2Int pos, string shape, int dir, bool isClone, bool calm, out Vector2Int np, out string ns, out bool dead)
         {
             np = pos + Shape.Dirs[dir]; ns = shape; dead = false;
-            if (np.x < 0 || np.y < 0 || np.x >= data.width || np.y >= data.height) return false;
+            if (Solid(np, calm)) return false;
             char c = data.At(np);
-            if (c == '#' || c == 'o') return false;
             bool own = isClone ? c == 'g' : IsPlayerGoal(c);
             if (own && data.goals[c] != shape) return false;
             if (c == 'S') { ns = Shape.Toggle(shape, dir); Play(sfxStation); }
@@ -240,32 +411,58 @@ namespace KayipParca
             return true;
         }
 
+        bool HookCanEnter(Vector2Int h) =>
+            h.x >= 1 && h.y >= 1 && h.x < data.width - 1 && h.y < data.height - 1 && data.At(h) != 'D';
+
         void Step(int a)
         {
             var n = s;
-            bool dead = false;
-            if (a < 4)
+            var death = Death.None;
+            bool burned = false, grabbed = false, dropped = false;
+            if (!s.crane)
             {
-                if (!TryMove(s.p, s.ps, a, false, out var np, out var nps, out var pd))
+                if (a < 4)
                 {
-                    player.Bump(Shape.Dirs[a]); Play(sfxBump); return;   // carpmak hamle harcamaz
+                    if (!TryMove(s.p, s.ps, a, false, s.calm, out var np, out var nps, out var pd))
+                    {
+                        player.Bump(Shape.Dirs[a]); Play(sfxBump); return;   // carpmak hamle harcamaz
+                    }
+                    n.p = np; n.ps = nps; if (pd) death = Death.Hazard;
+                    if (data.hasClone)
+                    {
+                        int ma = Shape.MirrorDir[a];
+                        if (TryMove(s.c, s.cs, ma, true, s.calm, out var nc, out var ncs, out var cd)) { n.c = nc; n.cs = ncs; if (cd) death = Death.Hazard; }
+                        else clone.Bump(Shape.Dirs[ma]);
+                    }
+                    Play(sfxMove);
                 }
-                n.p = np; n.ps = nps; dead |= pd;
-                if (data.hasClone)
+                else if (a == 4 || a == 5)
                 {
-                    int ma = Shape.MirrorDir[a];
-                    if (TryMove(s.c, s.cs, ma, true, out var nc, out var ncs, out var cd)) { n.c = nc; n.cs = ncs; dead |= cd; }
-                    else clone.Bump(Shape.Dirs[ma]);
+                    bool cw = a == 4;
+                    n.ps = cw ? Shape.RotCW(s.ps) : Shape.RotCCW(s.ps);
+                    if (data.hasClone) n.cs = cw ? Shape.RotCCW(s.cs) : Shape.RotCW(s.cs);
+                    player.Squash(); if (clone) clone.Squash();
+                    Play(sfxRotate);
                 }
-                Play(sfxMove);
+                // a == 8: bekle
             }
             else
             {
-                bool cw = a == 4;
-                n.ps = cw ? Shape.RotCW(s.ps) : Shape.RotCCW(s.ps);
-                if (data.hasClone) n.cs = cw ? Shape.RotCCW(s.cs) : Shape.RotCW(s.cs);
-                player.Squash(); if (clone) clone.Squash();
-                Play(sfxRotate);
+                if (a < 4)
+                {
+                    var h = s.hook + Shape.Dirs[a];
+                    if (!HookCanEnter(h)) { Play(sfxBump); return; }
+                    n.hook = h; Play(sfxMove);
+                }
+                else if (a == 8)
+                {
+                    if (!s.carrying && s.hook == data.yamali && data.ChestOpen(s.t)) { n.carrying = true; n.calm = true; grabbed = true; }
+                    else if (s.carrying && (s.hook == data.trash || s.hook == data.box))
+                    {
+                        n.ending = s.hook == data.trash ? 'T' : 'B'; n.carrying = false; n.crane = false; dropped = true;
+                    }
+                }
+                else return;   // vinc modunda dondurme yok
             }
             n.t = s.t + 1;
             n.moves = s.moves - 1;
@@ -273,21 +470,35 @@ namespace KayipParca
             foreach (var e in data.enemies)
             {
                 var e0 = LevelData.EnemyPos(e, s.t); var e1 = LevelData.EnemyPos(e, n.t);
-                if (e1 == n.p || (e1 == s.p && e0 == n.p)) dead = true;
-                if (data.hasClone && (e1 == n.c || (e1 == s.c && e0 == n.c))) dead = true;
+                if (e1 == n.p || (e1 == s.p && e0 == n.p)) death = Death.Enemy;
+                if (data.hasClone && (e1 == n.c || (e1 == s.c && e0 == n.c))) death = Death.Enemy;
             }
+            foreach (var l in data.lasers)
+                if (l.IsOn(n.t) && (l.cells.Contains(n.p) || (data.hasClone && l.cells.Contains(n.c)))) death = Death.Laser;
+            if (!n.calm)
+                foreach (var f in data.fires)
+                {
+                    if (f.At(n.t, n.p) || f.Swap(s.t, s.p, n.p)) death = Death.Fire;
+                    if (n.crane && !n.carrying && (f.At(n.t, n.hook) || f.Swap(s.t, s.hook, n.hook))) { n.hook = data.hookStart; burned = true; }
+                }
+            if (!n.crane && data.hasCrane && !n.calm && data.At(n.p) == 'K') { n.crane = true; n.hook = data.hookStart; }
 
             history.Push(s);
             s = n;
             ApplyVisuals(snap: false);
+            if (s.crane && !history.Peek().crane) Flash("Vinç senin kontrolünde! Ejderhanın göğsü açılınca Yamalı'yı yakala.");
+            if (burned) { Play(sfxFire); Flash("Halat yandı! Kanca başa döndü."); }
+            if (grabbed) { Play(sfxGrab); Flash("Yamalı'yı yakaladın! Ejderha sakinleşti. Onu nereye bırakacaksın?"); }
+            if (dropped) Flash(s.ending == 'T' ? "Yamalı çöpe gitti. Şimdi kalbin yerine otur!" : "Yamalı kendi kutusuna döndü. Şimdi kalbin yerine otur!");
 
-            if (dead) { StartCoroutine(Die("Ah! Tekrar dene.")); return; }
+            if (death != Death.None) { StartCoroutine(Die(death)); return; }
 
             char pc = data.At(s.p);
             bool win = IsPlayerGoal(pc) && data.goals[pc] == s.ps &&
-                       (!data.hasClone || (data.At(s.c) == 'g' && s.cs == data.goals['g']));
-            if (win) { StartCoroutine(Win(pc)); return; }
-            if (s.moves <= 0) StartCoroutine(Die("Hamlen bitti."));
+                       (!data.hasClone || (data.At(s.c) == 'g' && s.cs == data.goals['g'])) &&
+                       (pc != 'Y' || (s.calm && s.ending != '\0'));
+            if (win) { StartCoroutine(Win()); return; }
+            if (s.moves <= 0) StartCoroutine(Die(Death.Moves));
         }
 
         void Undo()
@@ -311,45 +522,166 @@ namespace KayipParca
             {
                 var w = World(LevelData.EnemyPos(data.enemies[i], s.t));
                 if (snap) enemyViews[i].SnapTo(w); else enemyViews[i].MoveTo(w);
+                nextFrames[i].transform.position = World(LevelData.EnemyPos(data.enemies[i], s.t + 1));
             }
+            for (int i = 0; i < data.lasers.Count; i++)
+            {
+                var l = data.lasers[i];
+                bool on = l.IsOn(s.t), warn = !on && l.IsOn(s.t + 1);
+                string o = l.dir == 0 || l.dir == 2 ? "v" : "h";
+                var spr = SpriteBank.Get($"Common/laser_{o}" + (on ? "" : "_warn"));
+                foreach (var sr in laserCells[i]) { sr.enabled = on || warn; sr.sprite = spr; }
+            }
+            UpdateFire(snap);
+            UpdateDragonAndCrane(snap);
+            foreach (var (sr, key) in slots)
+                if (sr) sr.color = key == 'g' ? (s.cs == data.goals['g'] ? MatchColor : CloneColor) : (s.ps == data.goals[key] ? MatchColor : SlotColor);
             if (movesText) movesText.text = $"Hamle: {s.moves}";
             if (hudNow) hudNow.sprite = SpriteBank.Get($"Player/body_{s.ps}");
+            if (hintText)
+            {
+                hintText.horizontalOverflow = HorizontalWrapMode.Wrap;
+                hintText.verticalOverflow = VerticalWrapMode.Overflow;
+                hintText.text = (string.IsNullOrEmpty(data.hint) ? "" : data.hint + "\n") + (s.crane ? CraneControls : Controls);
+            }
         }
 
-        IEnumerator Die(string msg)
+        void UpdateFire(bool snap)
+        {
+            var alive = new HashSet<long>();
+            if (!s.calm)
+                for (int li = 0; li < data.fires.Count; li++)
+                {
+                    var f = data.fires[li];
+                    foreach (int spawn in f.Alive(s.t))
+                    {
+                        long id = li * 100000L + spawn;
+                        alive.Add(id);
+                        var pos = World(f.cells[s.t - spawn]);
+                        if (!fireballs.TryGetValue(id, out var fb) || !fb)
+                        {
+                            var sr = MakeSprite("AtesTopu", "Common/fireball_0", pos, Color.white, 7);
+                            sr.flipX = f.dir == 1;
+                            sr.transform.rotation = Quaternion.Euler(0, 0, f.dir == 0 ? -90 : f.dir == 2 ? 90 : 0);
+                            fb = sr.gameObject.AddComponent<SpriteAnim>();
+                            fb.prefix = "Common/fireball"; fb.follow = true; fb.target = pos;
+                            fireballs[id] = fb;
+                        }
+                        fb.target = pos;
+                        if (snap) fb.transform.position = pos;
+                    }
+                    fireWarns[li].enabled = f.At(s.t + 1, f.spawn);
+                }
+            else foreach (var w in fireWarns) w.enabled = false;
+            var dead = new List<long>();
+            foreach (var kv in fireballs) if (!alive.Contains(kv.Key)) { if (kv.Value) Destroy(kv.Value.gameObject); dead.Add(kv.Key); }
+            foreach (var k in dead) fireballs.Remove(k);
+        }
+
+        void UpdateDragonAndCrane(bool snap)
+        {
+            if (dragon)
+            {
+                dragon.sprite = SpriteBank.Get(s.calm ? "Common/dragon_sleep" : "Common/dragon_awake");
+                bool open = !s.calm && data.ChestOpen(s.t);
+                chestCover.enabled = !s.calm && !open;
+                chestGlow.enabled = open;
+                if (heartSlot) heartSlot.enabled = s.calm;
+                var ya = yamaliSr.GetComponent<SpriteAnim>();
+                Vector3 yp = s.carrying ? World(s.hook) + new Vector3(0, -.25f, 0)
+                           : s.ending == 'T' ? World(data.trash) + new Vector3(0, .35f, 0)
+                           : s.ending == 'B' ? World(data.box) + new Vector3(0, .35f, 0)
+                           : World(data.yamali);
+                yamaliSr.enabled = open || s.calm;
+                if (countdown)
+                {
+                    countdown.enabled = !s.calm;
+                    var f = data.fires[0];
+                    int k = 1;
+                    while (k < 9 && !f.At(s.t + k, f.spawn)) k++;
+                    countdown.sprite = SpriteBank.Get("Common/num_" + k);
+                }
+                ya.target = yp; if (snap) yamaliSr.transform.position = yp;
+            }
+            if (hook)
+            {
+                var hp = World(s.hook);
+                var ha = hook.GetComponent<SpriteAnim>(); ha.target = hp; if (snap) hook.transform.position = hp;
+                var tp = World(new Vector2Int(s.hook.x, 0));
+                var ta = trolley.GetComponent<SpriteAnim>(); ta.target = tp; if (snap) trolley.transform.position = tp;
+            }
+        }
+
+        Coroutine flashing;
+        void Flash(string msg) { if (flashing != null) StopCoroutine(flashing); flashing = StartCoroutine(FlashRoutine(msg)); }
+        IEnumerator FlashRoutine(string msg)
+        {
+            ShowMessage("<size=40>" + msg + "</size>");
+            yield return new WaitForSeconds(2.2f);
+            if (!busy && !inScreen) ShowMessage("");
+        }
+
+        IEnumerator Die(Death why)
         {
             busy = true;
-            player.SetFace(2); if (clone) clone.SetFace(2);
-            Play(sfxDeath);
+            if (flashing != null) StopCoroutine(flashing);
+            string msg;
+            switch (why)
+            {
+                case Death.Laser: msg = "Lazer! Parçalara ayrıldın."; Play(sfxLaser ? sfxLaser : sfxDeath); break;
+                case Death.Fire: msg = "Yandın!"; Play(sfxFire ? sfxFire : sfxDeath); break;
+                case Death.Enemy: msg = "Yakalandın!"; Play(sfxDeath); break;
+                case Death.Moves: msg = "Hamlen bitti."; Play(sfxDeath); break;
+                default: msg = "Ah! Tekrar dene."; Play(sfxDeath); break;
+            }
+            if (why == Death.Moves) { player.SetFace(2); if (clone) clone.SetFace(2); }
+            else { player.Shatter(); if (clone) clone.Shatter(); }
             ShowMessage(msg);
-            yield return new WaitForSeconds(0.9f);
+            yield return new WaitForSeconds(1.0f);
             ShowMessage("");
             ResetState();
             busy = false;
         }
 
-        IEnumerator Win(char goal)
+        IEnumerator Win()
         {
             busy = true;
             player.SetFace(1); if (clone) clone.SetFace(1);
             Play(sfxFit);
             yield return new WaitForSeconds(0.35f);
             Play(sfxWin);
-            if (level >= levelCount)
+            ShowMessage("Tık!" + (string.IsNullOrEmpty(data.outro) ? "" : "\n<size=34>" + data.outro + "</size>"));
+            yield return new WaitForSeconds(string.IsNullOrEmpty(data.outro) ? 0.8f : 2.6f);
+
+            bool hasEnding = s.ending != '\0' && !string.IsNullOrEmpty(s.ending == 'T' ? data.endT : data.endB);
+            bool lastOfChapter = index + 1 >= entries.Count || entries[index + 1].chapterIndex != entries[index].chapterIndex;
+            if (hasEnding || lastOfChapter)
             {
-                ended = true;
-                ShowMessage(goal == 'E'
-                    ? "SON 2: KENDİ KUTUNA DÖNDÜN\nEksik olan sen değildin. Sadece yanlış yerdeydin.\n\n[Enter] baştan başla"
-                    : "SON 1: YERLEŞTİN\nResim tamamlandı... ama bu resim hiç senin değildi.\n\n[Enter] baştan başla");
+                ShowMessage("");
+                if (themes) yield return themes.FadeOut();
+                string text = hasEnding ? (s.ending == 'T' ? data.endT : data.endB) : entries[index].chapter + "|tamamlandı!";
+                string img = hasEnding ? (s.ending == 'T' ? "Story/ending_t" : "Story/ending_b") : "Story/title";
+                yield return ShowScreen(img, text, "[Enter] devam");
+                if (index + 1 < entries.Count)
+                {
+                    yield return ShowScreen("Story/title", entries[index + 1].chapter, "[Enter] Başla");
+                    HideScreen();
+                    yield return LoadLevel(index + 1);
+                }
+                else
+                {
+                    yield return ShowScreen("Story/title", "HATPIECE|Oynadığın için teşekkürler!", "[Enter] baştan başla");
+                    HideScreen();
+                    firstLoad = true;
+                    yield return TitleAndIntro();
+                }
                 yield break;
             }
-            ShowMessage("Tık!");
-            yield return new WaitForSeconds(0.6f);
-            yield return LoadLevel(level + 1);
+            yield return LoadLevel(index + 1);
         }
 
         // ------------------------------------------------------------------ sekil gostergesi (Sen / Hedef)
-        void SetupShapeHud(Color accent)
+        void SetupShapeHud()
         {
             if (!movesText) return;
             if (!hudNow)
@@ -357,24 +689,20 @@ namespace KayipParca
                 var parent = movesText.canvas.transform;
                 hudNow = MakeIcon(parent, "Sen", new Vector2(-230, -110));
                 hudGoal = MakeIcon(parent, "Hedef", new Vector2(-70, -110));
-                hudGoal2 = MakeIcon(parent, "Son 2", new Vector2(-70, -270));
+                hudGoal2 = MakeIcon(parent, "Hedef 2", new Vector2(-70, -270));
             }
             hudNow.sprite = SpriteBank.Get($"Player/body_{data.shape}");
-            char g1 = data.goals.ContainsKey('G') ? 'G' : '\0';
+            char g1 = data.goals.ContainsKey('G') ? 'G' : data.goals.ContainsKey('Y') ? 'Y' : data.goals.ContainsKey('E') ? 'E' : '\0';
             hudGoal.gameObject.SetActive(g1 != '\0');
             if (g1 != '\0')
             {
-                hudGoal.sprite = SpriteBank.Get($"Player/body_{data.goals['G']}");
-                hudGoal.color = Color.Lerp(accent, Color.white, .25f);
-                hudGoal.GetComponentInChildren<Text>().text = data.goals.ContainsKey('E') ? "Son 1" : "Hedef";
+                hudGoal.sprite = SpriteBank.Get($"Player/body_{data.goals[g1]}");
+                hudGoal.color = SlotColor;
+                hudGoal.GetComponentInChildren<Text>().text = g1 == 'Y' ? "Kalp" : "Hedef";
             }
-            bool two = data.goals.ContainsKey('E');
+            bool two = g1 == 'G' && data.goals.ContainsKey('E');
             hudGoal2.gameObject.SetActive(two);
-            if (two)
-            {
-                hudGoal2.sprite = SpriteBank.Get($"Player/body_{data.goals['E']}");
-                hudGoal2.color = new Color(.49f, .95f, .61f);
-            }
+            if (two) { hudGoal2.sprite = SpriteBank.Get($"Player/body_{data.goals['E']}"); hudGoal2.color = SlotColor; }
         }
 
         Image MakeIcon(Transform parent, string label, Vector2 pos)
@@ -405,9 +733,18 @@ namespace KayipParca
         // ------------------------------------------------------------------ yardimcilar
         static Vector3 World(Vector2Int p) => new Vector3(p.x + .5f, -p.y + .5f, 0);
 
+        void UpdateCable()
+        {
+            if (!cable || !hook || !trolley) return;
+            Vector3 top = trolley.transform.position, bottom = hook.transform.position + new Vector3(0, .3f, 0);
+            float len = Mathf.Max(.05f, top.y - bottom.y);
+            cable.transform.position = new Vector3(top.x, (top.y + bottom.y) / 2f, 0);
+            cable.transform.localScale = new Vector3(1, len, 1);
+        }
+
         Tile GetTile(string themeKey, string name)
         {
-            string path = $"Themes/{themeKey}/{name}";
+            string path = themeKey == null ? name : $"Themes/{themeKey}/{name}";
             if (tileCache.TryGetValue(path, out var t)) return t;
             t = ScriptableObject.CreateInstance<Tile>();
             t.sprite = SpriteBank.Get(path);
@@ -415,7 +752,7 @@ namespace KayipParca
             return t;
         }
 
-        void MakeSprite(string n, string spritePath, Vector3 pos, Color col, int order)
+        SpriteRenderer MakeSprite(string n, string spritePath, Vector3 pos, Color col, int order)
         {
             var go = new GameObject(n);
             go.transform.SetParent(objectsRoot, false);
@@ -424,12 +761,13 @@ namespace KayipParca
             sr.sprite = SpriteBank.Get(spritePath);
             sr.color = col;
             sr.sortingOrder = order;
+            return sr;
         }
 
         void ShowMessage(string m) { if (messageText) messageText.text = m; }
         void Play(AudioClip c) { if (sfx && c) sfx.PlayOneShot(c); }
 
-        /// -1 yok, 0-3 yon (N E S W), 4 saat yonu, 5 ters, 6 geri al, 7 yeniden, 8 onay, 9 seviye atla (editor)
+        /// -1 yok, 0-3 yon (N E S W), 4 saat yonu, 5 ters, 6 geri al, 7 yeniden, 8 bosluk/enter, 9 seviye atla (editor), 10 esc
         static int ReadAction()
         {
 #if ENABLE_INPUT_SYSTEM
@@ -443,8 +781,9 @@ namespace KayipParca
             if (k.qKey.wasPressedThisFrame) return 5;
             if (k.zKey.wasPressedThisFrame) return 6;
             if (k.rKey.wasPressedThisFrame) return 7;
-            if (k.enterKey.wasPressedThisFrame || k.spaceKey.wasPressedThisFrame) return 8;
+            if (k.enterKey.wasPressedThisFrame || k.numpadEnterKey.wasPressedThisFrame || k.spaceKey.wasPressedThisFrame) return 8;
             if (k.nKey.wasPressedThisFrame) return 9;
+            if (k.escapeKey.wasPressedThisFrame) return 10;
 #else
             if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow)) return 0;
             if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow)) return 1;
@@ -454,8 +793,9 @@ namespace KayipParca
             if (Input.GetKeyDown(KeyCode.Q)) return 5;
             if (Input.GetKeyDown(KeyCode.Z)) return 6;
             if (Input.GetKeyDown(KeyCode.R)) return 7;
-            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Space)) return 8;
+            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter) || Input.GetKeyDown(KeyCode.Space)) return 8;
             if (Input.GetKeyDown(KeyCode.N)) return 9;
+            if (Input.GetKeyDown(KeyCode.Escape)) return 10;
 #endif
             return -1;
         }

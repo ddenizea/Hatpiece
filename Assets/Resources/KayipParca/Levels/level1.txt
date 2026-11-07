@@ -4,6 +4,7 @@ MOVES=20
 SHAPE=1000
 GOAL_G=0010
 HINT=Yuvanın şekline uymak için Q / E ile dön. Duvara çarpmak hamle harcamaz.
+STORY=Yamalı seni masadan itti. Kutunun dibine düştün. Yerini geri almalısın!
 MAP
 ##############
 #P...#.......#

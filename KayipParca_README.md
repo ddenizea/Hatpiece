@@ -1,4 +1,4 @@
-# Kayıp Parça: Unity başlangıç paketi
+# Hatpiece: Unity projesi
 
 Yarım kalmış bir yapbozun eksik parçasısın. Altı farklı mekânda yerini arıyorsun.
 Tur bazlı, ızgara üzerinde oynanan bir bulmaca. Önce PC için, klavyeyle.
@@ -16,44 +16,55 @@ Bir ışık sahneyi etkilemiyorsa ışığın **Target Sorting Layers** ayarın�
 
 | Tuş | İş |
 |---|---|
-| WASD / Oklar | Bir kare ilerle |
-| E / Q | Saat yönünde / tersine döndür (1 hamle) |
+| WASD / Oklar | Bir kare ilerle (vinç modunda kancayı sür) |
+| E / Q | Saat yönünde / tersine döndür |
+| Boşluk | Bir tur bekle (vinç modunda: Yamalı'yı tut / bırak) |
 | Z | Geri al |
 | R | Seviyeyi yeniden başlat |
-| N | Sonraki seviye (sadece Editor'de, test için) |
+| Enter / Esc | Hikâye ekranında devam / geç |
+| N | Sonraki seviye (sadece Editor'de) |
 
-## Kurallar
+`LevelManager > Start Level` 1 ise oyun başlık ekranı ve giriş hikâyesiyle açılır. Başka bir sayı verirsen doğrudan o seviyeden başlar (test için).
 
-- Parçanın her kenarı ya **çıkıntı (1)** ya **girinti (0)**. Şekil `KDGB` sırasıyla yazılır: Kuzey, Doğu, Güney, Batı. Örnek: `1010`.
-- **Yuva**ya sadece şeklin birebir uyuyorsa girebilirsin.
-- **Şekil istasyonu**na girerken, öne bakan kenarın çıkıntıdan girintiye ya da tersine döner.
-- **Tehlike** karesine basarsan ölürsün. Hamlen biterse de ölürsün.
-- Duvara çarpmak hamle harcamaz.
-- **Düşmanlar** her hamlede bir kare devriye atar. Rotaları noktalarla gösterilir.
-- **Ayna klon** (3. seviye) yatayda tersine hareket eder ve tersine döner. İkiniz de yuvanızdayken kazanırsın.
+## Hikâye
 
-## Seviyeler
+Kahraman, "Uyuyan Ejderha" yapbozunun kalp parçası. Yamalı adında yabancı bir parça onu masadan itip yerini kapıyor ve ejderhayı yönetmeye başlıyor. Ejderha kahramanın önüne engeller koyup kaçıyor. Finalde oyuncu bir oyuncak vinçle Yamalı'yı ejderhanın göğsünden söküyor ve iki sondan birini seçiyor.
 
-| # | Tema | Yeni mekanik | Işık / ses hissi |
-|---|---|---|---|
-| 1 | Kutunun Dibi (karton) | Hareket + döndürme | Sıcak sabah ışığı |
-| 2 | Halı Ormanı (kanepe altı) | Şekil istasyonu, toz topu | Loş gün batımı |
-| 3 | Mutfak Fayansları | Ayna klon (yansıma görevi) | Soğuk, parlak floresan |
-| 4 | Oyuncak Kalesi | Devriye gezen çirkin parçalar | Aydınlık öğle |
-| 5 | Gece Koridoru | Karanlık, sadece senin ışığın | Çok karanlık, mavi gece |
-| 6 | Kedinin Yatağı (boss) | Kedi patileri, **iki son** | Kırmızı, nabız gibi atan ışık |
+## Seviyeler (Bölüm 1: Ejderhanın Kalbi)
 
-Son seviyede iki yuva var:
-- **Beyaz yuva (`1111`)**: "Yerleştin", 1. son.
-- **Yeşil yuva (`0000`)**: "Kendi kutuna döndün", 2. son.
+| # | Seviye | Mekanik |
+|---|---|---|
+| 1 | Kutunun Dibi | Hareket + döndürme |
+| 2 | Halı Ormanı | Şekil istasyonu, toz canavarları |
+| 3 | Mutfak Fayansları | Ayna klon |
+| 4 | Oyuncak Kalesi | Devriye gezen çirkin parçalar, vinç kumandası bulunur |
+| 5 | Çalışma Masası | Yanıp sönen lazerler (değersen parçalanırsın) |
+| 6 | Gece Koridoru | Karanlık |
+| 7 | Kedinin Yatağı | Kedi patileri (ara boss) |
+| 8 | Resmin İçi | Ateş topu atan ejderha, vinç ve iki son |
 
-Tüm seviyeler bir çözücüyle test edildi. En kısa çözümler sırasıyla 15, 18, 20, 20, 29 hamle. Son seviyede ise 9 ve 21 hamle.
+Tüm seviyeler `Tools/solver.py` ile çözülebilir olarak doğrulandı.
 
-## Işık ve ses geçişi
+**Yeni bölüm eklemek:** `Levels/bolumler.txt` dosyasına yeni bir `BOLUM=Bölüm 2: ...` satırı ekleyip altına seviye dosyalarını yazmak yeterli.
 
-`Oyun` objesindeki **ThemeManager**'da her tema için şu ayarlar var: global ışık rengi ve şiddeti, oyuncu ışığı, nabız, kamera rengi, **müzik** ve **ambiyans** klibi.
-Seviye bitince eski tema kararır ve müzik kısılır. Ardından yeni tema yeni renk ve müzikle açılır.
-Sesleri hazırladığınızda ilgili temaya sürükleyip bırakmanız yeterli. Efekt sesleri (hareket, döndürme, istasyon, çarpma, ölüm, oturma, kazanma) ise **LevelManager**'da duruyor. Hepsi boş bırakılabilir.
+## Seviye dosyası biçimi
+
+```
+NAME=Çalışma Masası
+THEME=6                 0 Kutu, 1 Halı, 2 Mutfak, 3 Oyuncak, 4 Gece, 5 Kedi, 6 Masa, 7 Resim
+MOVES=32
+SHAPE=1000              başlangıç şekli (K D G B kenarları, 1 = çıkıntı)
+GOAL_G=1011             yuvanın istediği şekil (E = 2. yuva, g = klon yuvası, Y = ejderhanın kalbi)
+ENEMY=1,7,14,7          x1,y1,x2,y2: ileri geri devriye
+LASER=6,0,S,2,1,0       duvardaki kaynak x,y, yön, açık tur, kapalı tur, faz
+FIRE=12,3,W,4,0         ateş topu çıkış karesi x,y, yön, kaç turda bir, faz
+CHEST=1,4,3             ejderhanın göğsü: açık tur, döngü, faz
+STORY= / HINT= / OUTRO= / END_T= / END_B=   metinler (| = yeni satır)
+MAP
+#  duvar   .  zemin   ,  desenli zemin   o  engel   X  tehlike   S  istasyon
+P  oyuncu  G/E  yuva  C  ayna klon  g  klon yuvası
+D  ejderha  Y  kalp/Yamalı  K  vinç kumandası  H  kanca  T  çöp kutusu  B  Yamalı'nın kutusu
+```
 
 ## Dosyalar
 
@@ -71,6 +82,7 @@ Assets/Prefabs/KayipParca/Parca.prefab   Oyuncu / ayna klon: gövde, yüz, şapk
 Previews/                     Seviye çizimleri (PNG)
 Tools/solver.py               Seviye çözücü: python3 Tools/solver.py Assets/Resources/KayipParca/Levels
 Tools/art.py                  Tüm görselleri yeniden üretir: python3 Tools/art.py .
+Tools/render.py               Seviye önizlemelerini çizer: python3 Tools/render.py .
 ```
 
 ### Seviye dosyası biçimi

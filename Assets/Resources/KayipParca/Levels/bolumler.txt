@@ -1,0 +1,10 @@
+# Bölüm listesi. Yeni bölüm için yeni bir BOLUM satırı açıp altına seviye dosyalarını yazın.
+BOLUM=Bölüm 1: Ejderhanın Kalbi
+level1
+level2
+level3
+level4
+level5
+level6
+level7
+level8

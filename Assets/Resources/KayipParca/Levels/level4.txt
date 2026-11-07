@@ -6,6 +6,8 @@ GOAL_G=1110
 ENEMY=1,7,14,7
 ENEMY=8,1,8,6
 HINT=Çirkin parçalar her hamlende bir kare yürür. Rotalarını noktalardan takip et.
+STORY=Yamalı'nın askerleri, yanlış yerlere zorla sokulmuş parçalar, kaleyi koruyor.
+OUTRO=Rafta bozuk bir oyuncak vinç buldun. Kumandasını yanına aldın!
 MAP
 ################
 #P....#........#

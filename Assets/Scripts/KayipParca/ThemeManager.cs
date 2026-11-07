@@ -40,7 +40,10 @@ namespace KayipParca
         public float fadeOutTime = 0.6f;
         public float fadeInTime = 1.2f;
 
-        public Theme[] themes =
+        public Theme[] themes = Defaults();
+
+        /// Tema sirasi = seviye dosyasindaki THEME numarasi.
+        public static Theme[] Defaults() => new[]
         {
             new Theme { name = "Kutunun Dibi",      globalColor = new Color(1f, .92f, .80f),  globalIntensity = 1.0f,  playerLightColor = new Color(1f, .85f, .6f), playerLightIntensity = .35f, playerLightRadius = 3f,   cameraColor = new Color(.18f, .11f, .07f) },
             new Theme { name = "Halı Ormanı",       globalColor = new Color(1f, .68f, .58f),  globalIntensity = .75f,  playerLightColor = new Color(1f, .8f, .55f), playerLightIntensity = .6f,  playerLightRadius = 3.5f, cameraColor = new Color(.10f, .06f, .14f) },
@@ -48,7 +51,21 @@ namespace KayipParca
             new Theme { name = "Oyuncak Kalesi",    globalColor = new Color(1f, .98f, .92f),  globalIntensity = 1.0f,  playerLightColor = new Color(1f, .9f, .7f),  playerLightIntensity = .3f,  playerLightRadius = 3f,   cameraColor = new Color(.12f, .16f, .18f) },
             new Theme { name = "Gece Koridoru",     globalColor = new Color(.35f, .45f, .80f), globalIntensity = .18f, playerLightColor = new Color(1f, .9f, .6f),  playerLightIntensity = 1.3f, playerLightRadius = 4.5f, cameraColor = new Color(.02f, .03f, .07f) },
             new Theme { name = "Kedinin Yatağı",    globalColor = new Color(1f, .45f, .40f),  globalIntensity = .7f,   playerLightColor = new Color(1f, .75f, .5f), playerLightIntensity = .8f,  playerLightRadius = 3f,   pulse = .12f, cameraColor = new Color(.10f, .03f, .04f) },
+            new Theme { name = "Çalışma Masası",    globalColor = new Color(1f, .93f, .82f),  globalIntensity = .85f,  playerLightColor = new Color(1f, .9f, .7f),  playerLightIntensity = .5f,  playerLightRadius = 3.5f, cameraColor = new Color(.10f, .07f, .05f) },
+            new Theme { name = "Resmin İçi",        globalColor = new Color(1f, .97f, .9f),   globalIntensity = 1.05f, playerLightColor = new Color(1f, .8f, .5f),  playerLightIntensity = .3f,  playerLightRadius = 3f,   pulse = .05f, cameraColor = new Color(.35f, .55f, .70f) },
         };
+
+        void Awake()
+        {
+            // Eski sahnelerde daha az tema kayitli olabilir: eksikleri varsayilanlarla tamamla, girilen sesleri koru.
+            var def = Defaults();
+            if (themes == null || themes.Length < def.Length)
+            {
+                var list = new System.Collections.Generic.List<Theme>(themes ?? new Theme[0]);
+                for (int i = list.Count; i < def.Length; i++) list.Add(def[i]);
+                themes = list.ToArray();
+            }
+        }
 
         Theme current;
         float intensityScale = 1f;   // 0..1 gecisler sirasinda

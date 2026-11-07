@@ -1,20 +1,18 @@
-NAME=Kedinin Yatağı
-THEME=5
-MOVES=34
-SHAPE=1010
-GOAL_G=1111
-GOAL_E=0000
-ENEMY=6,1,6,7
-ENEMY=11,7,11,1
-ENEMY=16,7,1,7
-HINT=Kedi uyanık. İki yuva var: hangisine oturacağını sen seç.
+NAME=Gece Koridoru
+THEME=4
+MOVES=36
+SHAPE=0000
+GOAL_G=1010
+HINT=Karanlıkta sadece etrafını görebilirsin. Çukurlara dikkat.
+STORY=Ejderha evin bütün ışıklarını söndürdü.
 MAP
 ##################
-#P.......o.......#
-#........o...S...#
-#..XX....o.......#
-#.S..........XX..#
-#....X....X......#
-#E.....o.....S..G#
-#................#
+#P.#......X......#
+#..#.###.##.####.#
+#..S...#....#..X.#
+##.###.#.X..#.##.#
+#....X.#.##.#....#
+#.##...S..#.##.#.#
+#..X.###..#..#.G.#
+#.....,...X......#
 ##################

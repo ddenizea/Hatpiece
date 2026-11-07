@@ -43,6 +43,31 @@ namespace KayipParca
         public void Squash() => scalePunch = 0.25f;
         public void SetFace(int mode) { faceMode = mode; animTime = 0; }
 
+        /// <summary>Parca kartona bolunup etrafa sacilir (lazer, ates, dusman...).</summary>
+        public void Shatter()
+        {
+            SetVisible(false);
+            for (int i = 0; i < 6; i++)
+            {
+                var go = new GameObject("Kirik");
+                go.transform.position = transform.position;
+                var sr = go.AddComponent<SpriteRenderer>();
+                sr.sprite = SpriteBank.Get($"Player/shard_{i}");
+                sr.sortingOrder = body.sortingOrder + 3;
+                sr.color = body.color;
+                float a = i * Mathf.PI / 3f + Random.Range(-.3f, .3f);
+                go.AddComponent<Shard>().velocity = new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * Random.Range(2.5f, 4f);
+            }
+        }
+
+        public void Restore() { SetVisible(true); SetFace(0); }
+
+        void SetVisible(bool v)
+        {
+            body.enabled = v; face.enabled = v;
+            if (hat) hat.enabled = v;
+        }
+
         void Update()
         {
             transform.position = Vector3.Lerp(transform.position, target, 1f - Mathf.Exp(-18f * Time.deltaTime));
@@ -67,4 +92,5 @@ namespace KayipParca
             hat.transform.localPosition = punch;
         }
     }
+
 }

@@ -1,0 +1,22 @@
+NAME=Resmin İçi
+THEME=7
+MOVES=90
+SHAPE=1010
+GOAL_Y=1110
+FIRE=12,3,W,6,0
+CHEST=2,6,5
+STORY=Yapbozun içindesin. Ejderha seni gördü!
+HINT=Ejderha her ateş püskürttükten sonra nefeslenmek için göğsünü 2 tur açar. Kafasının üstündeki sayı, bir sonraki ateşe kalan tur.
+END_T=SON: KALP YERİNE OTURDU|Yamalı'yı çöpe attın. Ejderha derin bir uykuya daldı. Resim artık tamamdı.
+END_B=GERÇEK SON: KİMSE EKSİK KALMASIN|Yamalı da kayıp bir parçaydı. Onu kendi kutusuna, Korsan Gemisi yapbozuna geri götürdün. Ejderha gülümseyerek uykuya daldı.
+MAP
+##################
+#P.....#..H..#####
+#......#.....DDDD#
+#............DDDD#
+#..#.....o...DDDD#
+#T.#....S....YDDD#
+#..#.........DDDD#
+#B...........DDDD#
+#.K..........#####
+##################

@@ -1,17 +1,20 @@
-NAME=Gece Koridoru
-THEME=4
-MOVES=36
-SHAPE=0000
-GOAL_G=1010
-HINT=Karanlıkta sadece etrafını görebilirsin. Çukurlara dikkat.
+NAME=Çalışma Masası
+THEME=6
+MOVES=32
+SHAPE=1000
+GOAL_G=1011
+LASER=6,0,S,2,1,0
+LASER=10,0,S,2,2,1
+LASER=0,5,E,1,2,2
+STORY=Ejderha lazer işaretçiyi açtı! Lazerler yanıp sönüyor.
+HINT=Kırmızı lazer yanarken üstünde durma. Boşluk tuşu bir tur bekletir.
 MAP
-##################
-#P.#......X......#
-#..#.###.##.####.#
-#..S...#....#..X.#
-##.###.#.X..#.##.#
-#....X.#.##.#....#
-#.##...S..#.##.#.#
-#..X.###..#..#.G.#
-#.....,...X......#
-##################
+################
+#P..#.......#..#
+#...#...#...#..#
+#..............#
+#.S....X.......#
+#..............#
+#...#...#...#.G#
+#...#.,.#...#..#
+################
