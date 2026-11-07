@@ -55,6 +55,9 @@ namespace KayipParca
         public readonly List<EnemyPath> enemies = new List<EnemyPath>();
         public readonly List<Laser> lasers = new List<Laser>();
         public readonly List<FireLane> fires = new List<FireLane>();
+        /// Sekil istasyonlari (satir satir okuma sirasiyla). Her biri tek kullanimlik; kullanilanlar State'te bit maskesiyle tutulur.
+        public readonly List<Vector2Int> stations = new List<Vector2Int>();
+        public int StationBit(Vector2Int p) { int i = stations.IndexOf(p); return i < 0 || i > 30 ? 0 : 1 << i; }
         public int chestOpen = 1, chestCycle = 4, chestPhase;
         public char[,] grid;
         public int width, height;
@@ -133,6 +136,7 @@ namespace KayipParca
                         case 'Y': d.yamali = p; break;
                         case 'T': d.trash = p; break;
                         case 'B': d.box = p; break;
+                        case 'S': d.stations.Add(p); break;
                     }
                     if (c == 'D' || c == 'Y')
                     {

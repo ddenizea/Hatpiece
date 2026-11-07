@@ -40,13 +40,15 @@ Kahraman, "Uyuyan Ejderha" yapbozunun kalp parçası. Yamalı adında yabancı b
 | # | Seviye | Mekanik |
 |---|---|---|
 | 1 | Kutunun Dibi | Hareket + döndürme |
-| 2 | Halı Ormanı | Şekil istasyonu, toz canavarları |
+| 2 | Halı Ormanı | Tek kullanımlık şekil istasyonları, toz canavarları |
 | 3 | Mutfak Fayansları | Ayna klon |
 | 4 | Oyuncak Kalesi | Devriye gezen çirkin parçalar, vinç kumandası bulunur |
 | 5 | Çalışma Masası | Yanıp sönen lazerler (değersen parçalanırsın) |
 | 6 | Gece Koridoru | Karanlık |
 | 7 | Kedinin Yatağı | Kedi patileri (ara boss) |
 | 8 | Resmin İçi | Ateş topu atan ejderha, vinç ve iki son |
+
+Şekil istasyonları tek kullanımlıktır. Oyuncu ya da ayna klon bir kez kullanınca istasyon söner ve düz zemine döner. Geri al ve yeniden başlat söndürülen istasyonları geri getirir.
 
 Tüm seviyeler `Tools/solver.py` ile çözülebilir olarak doğrulandı.
 
@@ -77,7 +79,7 @@ FIRE=12,3,W,4,0         ateş topu çıkış karesi x,y, yön, kaç turda bir, f
 CHEST=1,4,3             ejderhanın göğsü: açık tur, döngü, faz
 STORY= / HINT= / OUTRO= / END_T= / END_B= / END_ALONE= / END_DARK=   metinler (| = yeni satır)
 MAP
-#  duvar   .  zemin   ,  desenli zemin   o  engel   X  tehlike   S  istasyon
+#  duvar   .  zemin   ,  desenli zemin   o  engel   X  tehlike   S  istasyon (tek kullanımlık)
 P  oyuncu  G/E  yuva  C  ayna klon  g  klon yuvası
 D  ejderha  Y  kalp/Yamalı  K  vinç kumandası  H  kanca  T  çöp kutusu  B  Yamalı'nın kutusu
 L  kayıp parça
@@ -113,7 +115,7 @@ GOAL_G=0010        yuvanın istediği şekil (E = 2. son, g = klon yuvası)
 ENEMY=1,7,14,7     x1,y1,x2,y2: düz çizgide ileri geri devriye
 MAP
 #  duvar   .  zemin   ,  desenli zemin   o  engel   X  tehlike
-S  istasyon   P  oyuncu   G/E  yuva   C  ayna klon   g  klon yuvası
+S  istasyon (tek kullanımlık)   P  oyuncu   G/E  yuva   C  ayna klon   g  klon yuvası
 ```
 
 Yeni bir seviye ekledikten sonra `solver.py` ile çözülebilir olduğunu kontrol edin.

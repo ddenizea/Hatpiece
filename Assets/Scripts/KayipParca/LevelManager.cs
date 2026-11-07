@@ -14,7 +14,7 @@ namespace KayipParca
     /// Kurallar Tools/solver.py ile birebir aynidir; seviyeler o cozucuyle test edildi.
     ///  - WASD / Ok tuslari: bir kare ilerle (carpmak hamle harcamaz)
     ///  - E / Q: dondur, Bosluk: bir tur bekle (vinc modunda: tut / birak)
-    ///  - Sekil istasyonu (S): girdigin yondeki kenar cikinti <-> girinti olur
+    ///  - Sekil istasyonu (S): girdigin yondeki kenar cikinti <-> girinti olur; her istasyon tek kullanimlik (sonra duz zemin)
     ///  - Yuvaya yalnizca sekil birebir uyuyorsa girilir
     ///  - Ayna klon (C) yatayda ters hareket eder; ikisi de yuvadaysa kazanilir
     ///  - Her turdan sonra dusmanlar yurur, lazerler yanip soner, ates toplari ucar
@@ -54,6 +54,7 @@ namespace KayipParca
         public static readonly string[] ThemeKeys = { "T0_Kutu", "T1_Hali", "T2_Mutfak", "T3_Oyuncak", "T4_Gece", "T5_Kedi", "T6_Masa", "T7_Resim" };
         static readonly Color SlotColor = new Color(1f, .82f, .25f), MatchColor = new Color(.45f, 1f, .55f), CloneColor = new Color(.56f, .83f, 1f);
         static readonly Color PathColor = new Color(.82f, .29f, .85f), FireColor = new Color(1f, .59f, .16f);
+        static readonly Color SpentStationColor = new Color(.45f, .45f, .5f, .4f);
         const string Controls = "<size=22>WASD / Oklar: hareket    Q / E: döndür    Boşluk: bekle    Z: geri al    R: yeniden</size>";
         const string CraneControls = "<size=22>VİNÇ: WASD kancayı sürer    Boşluk: tut / bırak    Z: geri al    R: yeniden</size>";
 
@@ -64,6 +65,7 @@ namespace KayipParca
             public Vector2Int p, c, hook; public string ps, cs; public int t, moves;
             public bool crane, carrying, calm; public char ending;
             public Vector2Int f; public bool following;   // kayip parca
+            public int spent;                             // kullanilmis istasyonlar (LevelData.StationBit maskesi)
         }
 
         // kurtarilan kayip parcalar (bolum boyunca birikir, PlayerPrefs'e kaydedilir)
@@ -86,6 +88,7 @@ namespace KayipParca
         readonly List<SpriteRenderer> nextFrames = new List<SpriteRenderer>();
         readonly List<List<SpriteRenderer>> laserCells = new List<List<SpriteRenderer>>();
         readonly List<SpriteRenderer> fireWarns = new List<SpriteRenderer>();
+        SpriteRenderer[] stationViews = System.Array.Empty<SpriteRenderer>();   // data.stations sirasiyla
         readonly Dictionary<long, SpriteAnim> fireballs = new Dictionary<long, SpriteAnim>();
         readonly List<(SpriteRenderer sr, char key)> slots = new List<(SpriteRenderer, char)>();
         SpriteRenderer dragon, chestCover, chestGlow, yamaliSr, heartSlot, trolley, cable, hook, countdown;
@@ -255,6 +258,7 @@ namespace KayipParca
             floorMap.ClearAllTiles(); wallMap.ClearAllTiles(); decorMap.ClearAllTiles(); shadowMap.ClearAllTiles();
             for (int k = objectsRoot.childCount - 1; k >= 0; k--) Destroy(objectsRoot.GetChild(k).gameObject);
             enemyViews.Clear(); nextFrames.Clear(); laserCells.Clear(); fireWarns.Clear(); fireballs.Clear(); slots.Clear();
+            stationViews = new SpriteRenderer[data.stations.Count];
             dragon = chestCover = chestGlow = yamaliSr = heartSlot = trolley = cable = hook = countdown = lostSr = null;
 
             for (int y = 0; y < data.height; y++)
@@ -270,7 +274,7 @@ namespace KayipParca
                     if (wt || wl) shadowMap.SetTile(cell, GetTile(null, "Common/shadow_" + (wt && wl ? "tl" : wt ? "t" : "l")));
                     if (c == 'o') decorMap.SetTile(cell, GetTile(key, "obstacle"));
                     if (c == 'X') decorMap.SetTile(cell, GetTile(key, "hazard"));
-                    if (c == 'S') MakeSprite("Istasyon", "Common/station", World(p), Color.white, 2);
+                    if (c == 'S') stationViews[data.stations.IndexOf(p)] = MakeSprite("Istasyon", "Common/station", World(p), Color.white, 2);
                     if (c == 'K') MakeSprite("VincKumandasi", "Common/console", World(p), Color.white, 2);
                     if (c == 'T') MakeSprite("CopKutusu", "Common/trash", World(p), Color.white, 2);
                     if (c == 'B') MakeSprite("KorsanKutusu", "Common/pirate_box", World(p), Color.white, 2);
@@ -435,14 +439,15 @@ namespace KayipParca
             return (c == 'D' || c == 'Y') && !calm;
         }
 
-        bool TryMove(Vector2Int pos, string shape, int dir, bool isClone, bool calm, out Vector2Int np, out string ns, out bool dead)
+        /// spent: bu turdan onceki kullanilmis istasyonlar; used: bu hamlede harcanan istasyonun biti (yoksa 0)
+        bool TryMove(Vector2Int pos, string shape, int dir, bool isClone, bool calm, int spent, out Vector2Int np, out string ns, out bool dead, out int used)
         {
-            np = pos + Shape.Dirs[dir]; ns = shape; dead = false;
+            np = pos + Shape.Dirs[dir]; ns = shape; dead = false; used = 0;
             if (Solid(np, calm)) return false;
             char c = data.At(np);
             bool own = isClone ? c == 'g' : IsPlayerGoal(c);
             if (own && data.goals[c] != shape) return false;
-            if (c == 'S') { ns = Shape.Toggle(shape, dir); Play(sfxStation); }
+            if (c == 'S' && (spent & data.StationBit(np)) == 0) { ns = Shape.Toggle(shape, dir); used = data.StationBit(np); Play(sfxStation); }
             dead = c == 'X';
             return true;
         }
@@ -459,15 +464,15 @@ namespace KayipParca
             {
                 if (a < 4)
                 {
-                    if (!TryMove(s.p, s.ps, a, false, s.calm, out var np, out var nps, out var pd))
+                    if (!TryMove(s.p, s.ps, a, false, s.calm, s.spent, out var np, out var nps, out var pd, out var pu))
                     {
                         player.Bump(Shape.Dirs[a]); Play(sfxBump); return;   // carpmak hamle harcamaz
                     }
-                    n.p = np; n.ps = nps; moved = true; if (pd) death = Death.Hazard;
+                    n.p = np; n.ps = nps; n.spent |= pu; moved = true; if (pd) death = Death.Hazard;
                     if (data.hasClone)
                     {
                         int ma = Shape.MirrorDir[a];
-                        if (TryMove(s.c, s.cs, ma, true, s.calm, out var nc, out var ncs, out var cd)) { n.c = nc; n.cs = ncs; if (cd) death = Death.Hazard; }
+                        if (TryMove(s.c, s.cs, ma, true, s.calm, s.spent, out var nc, out var ncs, out var cd, out var cu)) { n.c = nc; n.cs = ncs; n.spent |= cu; if (cd) death = Death.Hazard; }
                         else clone.Bump(Shape.Dirs[ma]);
                     }
                     Play(sfxMove);
@@ -567,6 +572,8 @@ namespace KayipParca
 
         void ApplyVisuals(bool snap)
         {
+            for (int i = 0; i < stationViews.Length; i++)
+                if (stationViews[i]) stationViews[i].color = (s.spent & data.StationBit(data.stations[i])) != 0 ? SpentStationColor : Color.white;
             player.SetShape(s.ps);
             if (snap) player.SnapTo(World(s.p)); else player.MoveTo(World(s.p));
             if (clone)

@@ -4,6 +4,7 @@ Usage: python3 Tools/solver.py Assets/Resources/KayipParca/Levels [levelN.txt ..
 Rules (keep in sync with LevelManager.Step):
   actions: N E S W move, CW / CCW rotate, WAIT (Space). In crane mode: move hook, SPACE grab/drop/wait.
   - bumping into something solid costs no turn
+  - a shape station 'S' toggles the edge you enter it with, once: after the player or the clone uses it, it is plain floor
   - after every turn: enemies step, lasers blink, fireballs fly
   - laser: on if off == 0 or (t + phase) % (on + off) < on; standing in an on beam kills
   - fireball: spawned at time s when (s + phase) % period == 0, at lane index k at time s + k
@@ -56,6 +57,11 @@ class Level:
                 if c in 'PCHKYTBL': self.find[c] = (x, y)
                 if c in 'PCHL': self.g[y][x] = '.'
         self.goals = {k[5:]: v for k, v in self.meta.items() if k.startswith('GOAL_')}
+        # station bits in row-major order, same as LevelData.StationBit
+        self.station_bit = {}
+        for y, r in enumerate(self.g):
+            for x, c in enumerate(r):
+                if c == 'S' and len(self.station_bit) < 31: self.station_bit[(x, y)] = 1 << len(self.station_bit)
         self.crane = 'K' in self.find
         ch = self.meta.get('CHEST', '1,4,0').split(',')
         self.chest = tuple(map(int, ch))
@@ -133,13 +139,15 @@ def solve(path, want_all_goals=True, rescue=False):
         if ch in 'DY' and not calm: return True
         return False
 
-    def try_move(pos, shp, d, own_goals, calm):
+    def try_move(pos, shp, d, own_goals, calm, spent):
         n = (pos[0] + DIRS[d][0], pos[1] + DIRS[d][1])
         if solid_for_piece(n, calm): return None
         ch = L.at(n)
         if ch in own_goals and own_goals[ch] != shp: return None
-        if ch == 'S': shp = toggle(shp, d)
-        return n, shp, ch == 'X'
+        used = 0
+        if ch == 'S' and not spent & L.station_bit.get(n, 0):
+            shp = toggle(shp, d); used = L.station_bit.get(n, 0)
+        return n, shp, ch == 'X', used
 
     def hook_can(h):
         x, y = h
@@ -147,26 +155,26 @@ def solve(path, want_all_goals=True, rescue=False):
         return L.at(h) != 'D'
 
     LP = L.find.get('L')
-    # state: (p, ps, c, cs, t%per, mode, hook, carrying, calm, ending, follower_pos, following)
-    start = (P, shape, Cs, mirror(shape) if Cs else None, 0, 0, L.find.get('H'), False, False, '', LP, False)
+    # state: (p, ps, c, cs, t%per, mode, hook, carrying, calm, ending, follower_pos, following, spent_stations)
+    start = (P, shape, Cs, mirror(shape) if Cs else None, 0, 0, L.find.get('H'), False, False, '', LP, False, 0)
     seen = {start}; q = deque([(start, 0, [])]); results = {}
     names = ['N', 'E', 'S', 'W', 'CW', 'CCW', 'WAIT']
     while q:
         st, dist, hist = q.popleft()
-        p, ps, c, cs, t, mode, hook, carry, calm, ending, fp, fol = st
+        p, ps, c, cs, t, mode, hook, carry, calm, ending, fp, fol, spent = st
         for a in range(7):
             np_, nps, nc, ncs, nmode, nhook, ncarry, ncalm, nend = p, ps, c, cs, mode, hook, carry, calm, ending
-            nfp, nfol = fp, fol
+            nfp, nfol, nspent = fp, fol, spent
             dead = False
             moved = False
             if mode == 0:
                 if a < 4:
-                    r = try_move(p, ps, a, pgoal, calm)
+                    r = try_move(p, ps, a, pgoal, calm, spent)
                     if r is None: continue
-                    np_, nps, d1 = r; dead |= d1; moved = True
+                    np_, nps, d1, u1 = r; dead |= d1; moved = True; nspent |= u1
                     if c:
-                        rc = try_move(c, cs, MIRROR[a], {'g': cgoal} if cgoal else {}, calm)
-                        if rc: nc, ncs, d2 = rc; dead |= d2
+                        rc = try_move(c, cs, MIRROR[a], {'g': cgoal} if cgoal else {}, calm, spent)
+                        if rc: nc, ncs, d2, u2 = rc; dead |= d2; nspent |= u2
                 elif a in (4, 5):
                     nps = rot_cw(ps) if a == 4 else rot_ccw(ps)
                     if c: ncs = rot_ccw(cs) if a == 4 else rot_cw(cs)
@@ -220,7 +228,7 @@ def solve(path, want_all_goals=True, rescue=False):
                 if key not in results: results[key] = (dist + 1, hist + [names[a]])
                 if not want_all_goals: return L, results
                 continue
-            ns = (np_, nps, nc, ncs, nt % per, nmode, nhook, ncarry, ncalm, nend, nfp, nfol)
+            ns = (np_, nps, nc, ncs, nt % per, nmode, nhook, ncarry, ncalm, nend, nfp, nfol, nspent)
             if ns in seen: continue
             seen.add(ns); q.append((ns, dist + 1, hist + [names[a]]))
     return L, results

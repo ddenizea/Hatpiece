@@ -3,7 +3,7 @@ THEME=1
 MOVES=32
 SHAPE=1000
 GOAL_G=1101
-HINT=İstasyona hangi yönden girersen O taraftaki kenar değişir. Aynı istasyona farklı yönlerden girerek birden fazla kenarı değiştirebilirsin.
+HINT=İstasyona hangi yönden girersen o taraftaki kenar değişir. Her istasyon yalnızca bir kez çalışır, sonra söner. Hangisine hangi yönden gireceğini iyi düşün.
 STORY=Ejderha toz canavarlarını üstüne saldı.
 MAP
 ################
