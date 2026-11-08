@@ -188,6 +188,7 @@ namespace KayipParca
         {
             busy = true;
             rescued.Clear(); SaveRescued();   // yeni oyun
+            PlayerPrefs.DeleteKey(YamaliGame.YamaKey);   // Bolum 2'nin yama ordusu da sifirlanir
             yield return ShowScreen("Story/title", entries[0].chapter, "[Enter] Başla");
             var ta = Resources.Load<TextAsset>("KayipParca/Story/intro");
             if (ta != null)

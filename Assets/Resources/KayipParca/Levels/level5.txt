@@ -10,11 +10,11 @@ STORY=Ejderha lazer işaretçiyi açtı! Lazerler yanıp sönüyor.
 HINT=Lazer yanarken üstünde durma. Boşluk tuşu bir tur bekletir.
 MAP
 ################
-#P..#.......#..#
+#P..#.......#.L#
 #...#...#...#..#
 #..............#
 #.S....X.......#
 #..............#
 #...#...#.S.#.G#
-#...#.,.#.L.#..#
+#...#.,.#...#..#
 ################
