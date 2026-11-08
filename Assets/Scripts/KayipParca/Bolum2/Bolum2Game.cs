@@ -174,7 +174,7 @@ namespace KayipParca
             if (startAt == 0)
             {
                 yield return ShowScreen("Story/b2_intro_1", T("INTRO1", "Korsan Gemisi kutusu sarsıldı. Yama Korsanları intikam için dışarı taştı!"), "[Enter] devam    [Esc] geç");
-                if (!screenSkip) yield return ShowScreen("Story/b2_intro_2", T("INTRO2", "Ejderha uyandı. Kalbi sensin: artık onu sen yönetiyorsun. Havalan!"), "[Enter] Başla");
+                if (!screenSkip) yield return ShowScreen("Story/b2_intro_2", T("INTRO2", "Ejderha uyandı. Binicisi sensin: artık onu sen sürüyorsun. Havalan!"), "[Enter] Başla");
                 HideScreen();
             }
             for (int w = Mathf.Max(1, startAt); w <= 3; w++)
@@ -366,7 +366,7 @@ namespace KayipParca
             infection = 100; ApplyInfection(true);
             dragon.color = new Color(.85f, .7f, 1f);
             yield return new WaitForSeconds(1.2f);
-            yield return ShowScreen("Story/b2_end", T("END", "Kaptan'ın yaması ejderhanın kalbine yapıştı. \"Artık sen de bizdensin!\" Gözlerin mora döndü..."), "[Enter] devam");
+            yield return ShowScreen("Story/b2_end", T("END", "Kaptan'ın yaması ejderhanın binicisine, yani sana yapıştı. \"Artık sen de bizdensin!\" Gözlerin mora döndü..."), "[Enter] devam");
 
             var list = Chapters.Load();
             int me = list.FindIndex(e => e.file == "@Bolum2");

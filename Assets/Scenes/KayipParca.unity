@@ -1641,6 +1641,7 @@ MonoBehaviour:
     musicVolume: 0.6
     ambience: {fileID: 0}
     ambienceVolume: 0.4
+  monochrome: 1
 --- !u!4 &1056082270
 Transform:
   m_ObjectHideFlags: 0

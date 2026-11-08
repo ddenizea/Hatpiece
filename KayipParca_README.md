@@ -33,7 +33,7 @@ Hileler Editor'de ve build'de çalışır. `LevelManager > Cheats` kutusuyla kap
 
 ## Hikâye
 
-Kahraman, "Uyuyan Ejderha" yapbozunun kalp parçası. Yamalı adında yabancı bir parça onu masadan itip yerini kapıyor ve ejderhayı yönetmeye başlıyor. Ejderha kahramanın önüne engeller koyup kaçıyor. Finalde oyuncu bir oyuncak vinçle Yamalı'yı ejderhanın göğsünden söküyor ve iki sondan birini seçiyor.
+Kahraman, "Uyuyan Ejderha" yapbozunun binici parçası: ejderhanın sırtındaki eyerde oturur. Yamalı adında yabancı bir parça onu masadan itip eyere kuruluyor ve ejderhayı sürmeye başlıyor. Ejderha kahramanın önüne engeller koyup kaçıyor. Finalde oyuncu bir oyuncak vinçle Yamalı'yı eyerden söküyor ve iki sondan birini seçiyor. (Seviye dosyasındaki `CHEST=` ve koddaki `chest*` adları eski "göğüs" mekaniğinden kalmadır: kanat kalkınca eyer açılır.)
 
 ## Seviyeler (Bölüm 1: Ejderhanın Kalbi)
 
@@ -56,12 +56,14 @@ Tüm seviyeler `Tools/solver.py` ile çözülebilir olarak doğrulandı.
 
 ## Görsel stil: siyah-beyaz doodle
 
-Bölüm 1 siyah zemin üstünde beyaz çizimlerle oynanır. Zemin, duvar, engel, istasyon, lazer ve yuva doodle stilinde yeniden çizildi. Karakterlerin çizimine dokunulmadı, sadece renkleri siyah-beyaza çevrildi. Kahraman beyaz; kötü parçalar ve Yamalı ters renkte (siyah gövde, beyaz kontur).
+Bölüm 1 siyah zemin üstünde beyaz çizimlerle oynanır. Zemin, duvar, engel, istasyon, lazer ve yuva doodle stilinde çizilir (`Tools/art_doodle.py`). Karakterler "blob" stilindedir (`Tools/art_blob.py`): tek parça tombul beyaz siluet, siyah nokta gözler, kontur yok (bacak yok: alt çıkıntıyla karışıyordu). Yapboz çıkıntıları (K D G B) blob üstünde yumuşak tümsekler olarak kalır; şapka sol üst köşede küçüktür, üst çıkıntıyı örtmez. Kahraman beyaz; kötü parçalar ve Yamalı ters renkte (siyah gövde, kalın beyaz kenar, beyaz gözler). Kayıp parça gri. Karakterler 2x çözünürlükte (64 px, PPU 64; ejderha 256x384), hikâye ekranları 1280x720 ve yumuşak filtreyle gelir, harita parçaları 32 px piksel olarak kalır (`KayipParcaTextureImporter` ayırır).
+
+Arayüz de aynı mürekkeple: tek yazı tipi Nunito (piksel yazı tipi kaldırıldı), kontur yok. Hamle sayacı beyaz hap, kurtarılan parçalar gözlü halkalar, tuş ipuçları beyaz tuş kapakları (`KeyHints`: "[W][A][S][D] hareket" metnini kapaklara çevirir), orta mesaj beyaz konuşma balonu, hedef ikonları içi boş blob çerçeve (`Player/frame_*`). HUD `LevelManager.BuildHud` ile kurulur; Editor'de de çalıştığı için Play'e girmeden önizlenebilir.
 
 - **Yuva:** kesintisiz çerçeve. Şekil uymuyorsa soluk gri, uyunca parlak beyaz olur ve nabız gibi parlayan bir ışık açılır.
 - **Duvarlar:** 16 autotile (`wall_LRUD`), dış köşeler yuvarlak. Bazı duvarlarda temaya özel küçük bir işaret var (`wallm_`). İç köşeleri `Common/fillet_*` dolguları yuvarlatır.
 - **Işık:** `ThemeManager > Monochrome` açıkken ışıklar beyaz, kamera arka planı siyah. Gece temasının karanlığı korunur. Kapatırsanız temaların renkli ışıkları geri gelir.
-- Görseller `Tools/art_doodle.py` ile üretilir: `python3 Tools/art_doodle.py .` Renkli eski hâller git geçmişinde duruyor. Hikâye ekranları ve Bölüm 2 görselleri henüz renkli.
+- Harita görselleri `Tools/art_doodle.py`, karakterler ve hikâye ekranları `Tools/art_blob.py` ile üretilir: `python3 Tools/art_blob.py .` (kontrol tablosu için `--sheet yol`). Renkli eski hâller git geçmişinde duruyor. Bölüm 2 görselleri henüz renkli.
 
 ## Kayıp parçalar ve 4 son
 
@@ -70,8 +72,8 @@ Bölüm 1 siyah zemin üstünde beyaz çizimlerle oynanır. Zemin, duvar, engel,
 | Son | Koşul |
 |---|---|
 | Gizli son: Yeni Yamalı | Hiç parça kurtarılmadı |
-| Yalnız Kalp | 1-3 parça kurtarıldı |
-| Kalp Yerine Oturdu | En az 4 parça + Yamalı çöpe |
+| Yalnız Binici | 1-3 parça kurtarıldı |
+| Binici Yerine Oturdu | En az 4 parça + Yamalı çöpe |
 | Gerçek son: Kimse Eksik Kalmasın | En az 4 parça + Yamalı kendi kutusuna |
 
 ## Bölüm 2: Yama Korsanları (gerçek zamanlı)
@@ -119,7 +121,9 @@ Assets/Scripts/KayipParca/    Oyun kodu + Editor/ kurulum menüsü
 Assets/Prefabs/KayipParca/Parca.prefab   Oyuncu / ayna klon: gövde, yüz, şapka katmanları Inspector'dan bağlı
 Previews/                     Seviye çizimleri (PNG)
 Tools/solver.py               Seviye çözücü: python3 Tools/solver.py Assets/Resources/KayipParca/Levels
-Tools/art.py                  Tüm görselleri yeniden üretir: python3 Tools/art.py .
+Tools/art.py                  Eski renkli görselleri üretir (artık kullanılmıyor): python3 Tools/art.py .
+Tools/art_doodle.py           Harita parçaları, siyah-beyaz doodle
+Tools/art_blob.py             Karakterler + hikâye ekranları, blob stili
 Tools/render.py               Seviye önizlemelerini çizer: python3 Tools/render.py .
 ```
 

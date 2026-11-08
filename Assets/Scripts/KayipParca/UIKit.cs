@@ -15,17 +15,19 @@ namespace KayipParca
         public static readonly Vector2 Reference = new Vector2(1920, 1080);
         public const float Margin = 40f;
         public static readonly Color OutlineColor = new Color(0, 0, 0, .8f);
+        /// Ikincil yazilar (etiketler, tus aciklamalari): siyah zemin ustunde gri.
+        public static readonly Color Mute = new Color(.6f, .6f, .6f);
         public static readonly Color BackdropColor = new Color(0, 0, 0, .62f);
         public static readonly Vector2 BackdropPad = new Vector2(44, 20);
 
         public static Font DefaultFont => Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
         // ------------------------------------------------------------------ yazi tipleri (Resources/KayipParca/Fonts, OFL)
-        // Basliklar ve HUD: Pixelify Sans (piksel sanatiyla uyumlu). Hikaye, ipucu, mesaj: Nunito (uzun metinde okunakli).
-        // Dosyalar zaten kalin/yari kalin kesimler; FontStyle.Bold ile ayrica kalinlastirilmaz.
+        // Her sey Nunito: yuvarlak hatlari blob (tombul siluet) stiliyle uyumlu. Kalin kesim baslik, sayac ve tus
+        // kapaklarinda; yari kalin kesim etiket ve ipucu satirlarinda. FontStyle.Bold ile ayrica kalinlastirilmaz.
         static Font hud, hudLight, body, bodyLight;
-        public static Font Hud => hud ? hud : hud = LoadFont("PixelifySans-Bold");             // baslik, sayaclar
-        public static Font HudLight => hudLight ? hudLight : hudLight = LoadFont("PixelifySans-Medium"); // kucuk etiketler, tus ipuclari
+        public static Font Hud => hud ? hud : hud = LoadFont("Nunito-ExtraBold");              // baslik, sayaclar, tus kapaklari
+        public static Font HudLight => hudLight ? hudLight : hudLight = LoadFont("Nunito-SemiBold"); // kucuk etiketler
         public static Font Body => body ? body : body = LoadFont("Nunito-ExtraBold");          // mesajlar, hikaye metni
         public static Font BodyLight => bodyLight ? bodyLight : bodyLight = LoadFont("Nunito-SemiBold"); // ipucu satiri
 
@@ -131,9 +133,68 @@ namespace KayipParca
             t.horizontalOverflow = HorizontalWrapMode.Wrap; t.verticalOverflow = VerticalWrapMode.Overflow;
             t.resizeTextForBestFit = false;
             t.lineSpacing = 1f;
+            // blob stili: siyah zemin ustunde duz beyaz yazi, kontur yok (eski sahnelerden kalan Outline kaldirilir)
             var o = t.GetComponent<Outline>();
-            if (!o) o = t.gameObject.AddComponent<Outline>();
-            o.effectColor = OutlineColor; o.effectDistance = new Vector2(3, -3);
+            if (o) { if (Application.isPlaying) Object.Destroy(o); else Object.DestroyImmediate(o); }
+        }
+
+        /// 9-dilim yuvarlak sprite'in kose yaricapini tuval biriminde ayarlar (RoundedSprite kenari 12 px).
+        public static void SetCorner(Image img, float radius)
+        {
+            if (img) img.pixelsPerUnitMultiplier = 12f / Mathf.Max(1f, radius);
+        }
+
+        /// Metni "[Tus] etiket" gruplarindan tus kapaklarina cevirir (KeyHints). Text'in .text'i kullanilmaya devam eder.
+        public static KeyHints AddKeyHints(Text t)
+        {
+            if (!t) return null;
+            var k = t.GetComponent<KeyHints>();
+            return k ? k : t.gameObject.AddComponent<KeyHints>();
+        }
+
+        static Sprite circle;
+        /// Beyaz daire sprite (renk Image.color ile verilir).
+        public static Sprite CircleSprite
+        {
+            get
+            {
+                if (circle) return circle;
+                const int n = 32; const float r = 15.5f;
+                var tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp, name = "UIKit_Circle" };
+                var px = new Color32[n * n];
+                for (int y = 0; y < n; y++)
+                    for (int x = 0; x < n; x++)
+                    {
+                        float d = Vector2.Distance(new Vector2(x + .5f, y + .5f), new Vector2(n / 2f, n / 2f));
+                        px[y * n + x] = new Color32(255, 255, 255, (byte)(Mathf.Clamp01(r - d + .5f) * 255));
+                    }
+                tex.SetPixels32(px); tex.Apply();
+                circle = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(.5f, .5f), 100, 0, SpriteMeshType.FullRect);
+                return circle;
+            }
+        }
+
+        /// Kurtarilan parca halkasi: dolu = gozlu beyaz top, bos = gri halka.
+        public static Image MakeDot(Transform parent, bool filled, float size = 22f)
+        {
+            var img = MakeImage(parent, filled ? "Dolu" : "Bos", filled ? Color.white : Mute);
+            img.sprite = CircleSprite; img.rectTransform.sizeDelta = new Vector2(size, size);
+            if (filled)
+            {
+                foreach (var (x, y, r) in new[] { (-3.5f, -.5f, 3.6f), (3.5f, 1f, 4.2f) })
+                {
+                    var eye = MakeImage(img.transform, "Goz", Color.black);
+                    eye.sprite = CircleSprite;
+                    Pin(eye.rectTransform, new Vector2(.5f, .5f), new Vector2(x, y), new Vector2(r, r));
+                }
+            }
+            else
+            {
+                var hole = MakeImage(img.transform, "Ic", Color.black);
+                hole.sprite = CircleSprite;
+                Pin(hole.rectTransform, new Vector2(.5f, .5f), Vector2.zero, new Vector2(size - 6, size - 6));
+            }
+            return img;
         }
 
         /// Kutuya sigmazsa yaziyi kucultur (zengin metin <size> etiketleri olmayan metinler icin).
@@ -210,7 +271,7 @@ namespace KayipParca
         /// Tam ekran hikaye ekrani: ustte resim (orani korunur), altta metin ve tus ipucu. Iki bolum de kullanir.
         public static GameObject MakeStoryScreen(Transform canvas, out Image pic, out Text body, out Text prompt)
         {
-            var root = MakeImage(canvas, "HikayeEkrani", new Color(.04f, .04f, .06f, 1f));
+            var root = MakeImage(canvas, "HikayeEkrani", Color.black);
             root.raycastTarget = true;   // arkadaki oyuna tiklanmasin
             Stretch(root.rectTransform, 0, 0, 1, 1);
 
@@ -227,8 +288,9 @@ namespace KayipParca
             BestFit(body, 22, 40);
 
             prompt = MakeText(root.transform, "Ipucu", Hud, 28, TextAnchor.MiddleCenter);
-            BottomBand(prompt.rectTransform, 160, 160, 24, 50);
-            prompt.color = new Color(1f, .82f, .3f);
+            BottomBand(prompt.rectTransform, 160, 160, 22, 50);
+            prompt.color = Mute;
+            AddKeyHints(prompt);   // "[Enter] devam" -> tus kapagi + etiket
 
             root.gameObject.SetActive(false);
             return root.gameObject;
