@@ -204,27 +204,30 @@ def shard_img(px, i):
 
 # ---------------------------------------------------------------- dragon (128x192 tasarim uzayi, k kat)
 def dragon_img(kind, k=2.0, rider=None, hole=True):
-    """Ejderha omzunun uzerinden sola (oyuncuya) bakar; govdesi saga donuk, sirtindaki eyer sol kenarda (y 96..128).
-    rider: eyere oturacak RGBA (None = bos). hole: eyer yuvasi (siyah delik) cizilsin mi."""
+    """Ejderha 3/4 arkadan gorunur: govdesi saga donuk, SIRTI sola (oyuncuya) bakar, kafasi omzunun uzerinden
+    sola donmustur (agiz sol ustte, ates o yone cikar). Eyer sirtta, sol kenarda (y 96..128): siyah yuva + govdeyi
+    saran kolan. Kanat eyerin arkasindan sag uste acilir, sirt dikenleri boyun boyunca sol kenarda.
+    rider: eyere oturacak RGBA (sirt cizgisinin ustune biner). hole: eyer yuvasi cizilsin mi."""
     w, h = int(128 * k), int(192 * k)
     def T(x, y): return (x * k, y * k)
     body = Ink(w, h)
     body.ellipse(*T(62, 128), 50 * k, 54 * k)                 # govde
     body.circle(*T(26, 112), 22 * k)                          # sirt / eyer tumsegi (sol kenara tasar)
     body.poly([T(44, 86), T(74, 80), T(56, 40), T(30, 48)])   # boyun
-    body.circle(*T(36, 44), 22 * k)                           # kafa
+    body.circle(*T(36, 44), 22 * k)                           # kafa (omzunun uzerinden bakar)
     body.rrect(*T(0, 38), *T(30, 58), 9 * k)                  # burun (agiz sol kenarda)
     body.poly([T(27, 27), T(33, 6), T(41, 27)]); body.poly([T(43, 29), T(52, 10), T(56, 31)])   # boynuzlar
-    body.poly([T(70, 80), T(100, 8), T(124, 40), T(118, 88)]) # kanat (eyerin sag ustunde)
+    body.poly([T(40, 98), T(72, 10), T(120, 40), T(104, 98)]) # kanat: eyerin arkasindan sag uste
     body.ellipse(*T(100, 172), 26 * k, 10 * k, rot=-28)       # kuyruk
     body.circle(*T(124, 156), 5 * k)
     body.rrect(*T(40, 158), *T(62, 190), 8 * k); body.rrect(*T(78, 158), *T(100, 190), 8 * k)   # bacaklar
-    for cx, cy in ((34, 94), (44, 86), (58, 80)): body.circle(cx * k, cy * k, 5 * k)             # sirt dikenleri
+    for cx, cy in ((28, 70), (36, 59), (45, 49), (16, 134), (12, 148)): body.circle(cx * k, cy * k, 5 * k)   # sirt dikenleri (boyun + eyer alti)
     body.goo(2.6 * k)
     ink = Ink(w, h)
-    if hole: ink.rrect(*T(7, 101), *T(27, 121), 5 * k)         # eyer yuvasi
-    for x0, y0, x1, y1 in ((100, 8, 112, 72), (100, 8, 120, 80)): ink.line([T(x0, y0), T(x1, y1)], 1.6 * k)   # kanat kemikleri
-    for yy in (116, 130, 144, 158): ink.arc(*T(84, yy), 24 * k, -25, 25, 1.6 * k)                               # karin plakalari
+    ink.line([T(4, 118), T(60, 126), T(108, 112)], 3.2 * k)   # eyer kolani: govdeyi sarar
+    if hole and rider is None: ink.rrect(*T(7, 101), *T(27, 121), 5 * k)   # eyer yuvasi (bos eyer)
+    for x0, y0, x1, y1 in ((72, 10, 92, 90), (72, 10, 104, 84)): ink.line([T(x0, y0), T(x1, y1)], 1.6 * k)   # kanat kemikleri
+    for yy in (138, 152): ink.arc(*T(84, yy), 24 * k, -25, 25, 1.6 * k)                                      # karin plakalari (sag: on taraf)
     for fx in (46, 51, 56, 84, 89, 94): ink.circle(fx * k, 186 * k, 1.8 * k)                                     # parmaklar
     ink.line([T(3, 52), T(22, 51)], 2 * k)                                                                        # agiz
     if kind == 'awake':
@@ -240,7 +243,52 @@ def dragon_img(kind, k=2.0, rider=None, hole=True):
             z.line([T(zx, zy), T(zx + zs, zy), T(zx, zy + zs), T(zx + zs, zy + zs)], 1.6 * k)
         layers.append((z, W))
     if rider is not None:
-        layers.append((rider, 17 * k - rider.width / 2, 111 * k - rider.height / 2))
+        # hikaye resimlerinde binici boynun dibinde, sirtin ustunde oturur (yuva cizilmez; oyun ici yuva ayri).
+        # Beyaz binici beyaz govdeden ayrilsin diye altina siyah bir hale konur.
+        rx, ry = int(40 * k - rider.width / 2), int(80 * k - rider.height / 2)
+        halo = Image.new('L', (w, h), 0)
+        halo.paste(rider.split()[3].filter(ImageFilter.MaxFilter(int(2.2 * k) * 2 + 1)), (rx, ry))
+        layers.append((halo, K)); layers.append((rider, rx, ry))
+    return compose(w, h, layers)
+
+
+def dragon_side(kind, k=1.0, rider=None, seat=False, seat_rect=(108, 64, 130, 78)):
+    """Hikaye ekranlari icin yandan ejderha (prototipteki cizim): sola bakar, kafa solda, kanat sagda yukari,
+    kisa bacaklar, karin noktalari. 210x160 tasarim uzayi, k kat. rider: sirtina oturan RGBA (siyah haleyle
+    govdeden ayrilir). seat: bos eyer yuvasi (siyah) cizilsin mi."""
+    w, h = int(210 * k), int(160 * k)
+    def T(x, y): return (x * k, y * k)
+    body = Ink(w, h)
+    body.ellipse(*T(112, 104), 62 * k, 40 * k)                # govde
+    body.circle(*T(58, 66), 30 * k)                           # kafa
+    body.rrect(*T(16, 60), *T(60, 86), 13 * k)                # burun
+    body.poly([T(112, 70), T(176, 12), T(172, 86)])           # kanat
+    body.rrect(*T(78, 124), *T(96, 154), 9 * k); body.rrect(*T(130, 124), *T(148, 154), 9 * k)   # bacaklar
+    body.ellipse(*T(180, 118), 26 * k, 12 * k, rot=-25)       # kuyruk
+    for cx, cy, r in ((82, 60, 7), (100, 64, 6), (46, 36, 7), (66, 34, 7)): body.circle(cx * k, cy * k, r * k)   # sirt tumsekleri, kulaklar
+    body.goo(3 * k)
+    ink = Ink(w, h)
+    ink.circle(*T(28, 72), 2.5 * k)                           # burun deligi
+    for i in range(7):                                        # karin noktalari
+        t = i / 6; x = 60 + 60 * t; y = 110 - 10 * 4 * t * (1 - t)
+        ink.circle(x * k, y * k, 2.2 * k)
+    if kind == 'awake':
+        ink.circle(*T(52, 60), 4 * k); ink.line([T(42, 50), T(62, 54)], 2.6 * k)
+        ink.poly([T(18, 80), T(50, 80), T(34, 88)])
+    else:
+        ink.arc(*T(55, 60), 9 * k, 20, 160, 3.5 * k)
+    if seat and rider is None: ink.rrect(*T(seat_rect[0], seat_rect[1]), *T(seat_rect[2], seat_rect[3]), 5 * k)
+    layers = [(body, W), (ink, K)]
+    if kind == 'sleep':
+        z = Ink(w, h)
+        for (zx, zy, zs) in ((86, 24, 6), (98, 12, 8), (112, -2, 10)):
+            z.line([T(zx, zy), T(zx + zs, zy), T(zx, zy + zs), T(zx + zs, zy + zs)], 2 * k)
+        layers.append((z, W))
+    if rider is not None:
+        rx, ry = int(120 * k - rider.width / 2), int(46 * k - rider.height / 2)
+        halo = Image.new('L', (w, h), 0)
+        halo.paste(rider.split()[3].filter(ImageFilter.MaxFilter(int(2.2 * k) * 2 + 1)), (rx, ry))
+        layers.append((halo, K)); layers.append((rider, rx, ry))
     return compose(w, h, layers)
 
 
@@ -287,8 +335,12 @@ def make_common():
     save(piece_img('1001', PX, face='sad', fill=G), 'Common', 'lost_sad.png')
     save(piece_img('1001', PX, face='happy', fill=G), 'Common', 'lost_happy.png')
     save(yamali_img(PX), 'Common', 'yamali.png')
-    save(dragon_img('awake'), 'Common', 'dragon_awake.png')
-    save(dragon_img('sleep'), 'Common', 'dragon_sleep.png')
+    # oyun ici ejderha: yandan, 6x4 karo (384x256, PPU 64). Level 8'de dikdortgen 6 genis 4 yuksek; eyer karosu
+    # dikdortgenin (3,1) karosu = sirtin ustu. Agiz sol kenarda 1. satirda (ates oradan cikar).
+    for kind in ('awake', 'sleep'):
+        side = dragon_side(kind, 1.6, seat=True, seat_rect=(113, 67, 137, 76))
+        canvas_ = Image.new('RGBA', (384, 256), (0, 0, 0, 0)); canvas_.alpha_composite(side, (24, 0))
+        save(canvas_, 'Common', f'dragon_{kind}.png')
     closed, glow = seat_tiles()
     save(closed, 'Common', 'chest_closed.png'); save(glow, 'Common', 'chest_glow.png')
 
@@ -340,12 +392,13 @@ def box_img(px):
 
 
 def make_story():
-    kd = 300 * Z / 192
-    hero = rider(kd)
-    # baslik: uyuyan ejderha ve binicisi, yapboz izgarasi
-    save(scene([(dragon_img('sleep', kd, rider=hero), 220, 30)], grid=True), 'Story', 'title.png')
-    # 1: yapboz bitmek uzere, binici eksik (eyer bos)
-    save(scene([(dragon_img('sleep', kd), 150, 30), (piece_img('1110', 130 * Z, face='happy', hat=True), 460, 200)], grid=True), 'Story', 'intro_1.png')
+    ks = 400 * Z / 210                      # ejderha 400 birim genis
+    hero = piece_img('1110', int(52 * ks), hat=True)
+    yam = yamali_img(int(52 * ks))
+    # baslik: uyuyan ejderha, sirtinda binicisi
+    save(scene([(dragon_side('sleep', ks, rider=hero), 120, 40)], grid=True), 'Story', 'title.png')
+    # 1: yapboz bitmek uzere, eyer bos; binici kenarda bekliyor
+    save(scene([(dragon_side('sleep', ks, seat=True), 60, 50), (piece_img('1110', 110 * Z, face='happy', hat=True), 490, 190)], grid=True), 'Story', 'intro_1.png')
     # 2: Yamali kahramani masadan (eyerden) iter
     t = Ink(SW, SH); t.line([at(0, 262), at(400, 262)], 10 * Z); t.line([at(0, 300), at(400, 300)], 4 * Z)
     m = Ink(SW, SH)
@@ -353,22 +406,21 @@ def make_story():
     falling = piece_img('1110', 130 * Z, face='dead', hat=True).rotate(-35, resample=Image.BICUBIC, expand=True)
     save(scene([(t, W), (m, W), (yamali_img(150 * Z), 230, 118), (falling, 410, 190)]), 'Story', 'intro_2.png')
     # 3: resim tamam ama eyerde Yamali, ejderha uyandi
-    d = dragon_img('awake', kd, rider=yamali_img(int(42 * kd)))
     sp = Ink(SW, SH)
-    for x, y in ((120, 70), (540, 90), (130, 290), (530, 280)): sp.line([at(x - 9, y), at(x + 9, y)], 3 * Z); sp.line([at(x, y - 9), at(x, y + 9)], 3 * Z)
-    save(scene([(d, 220, 30), (sp, W)], grid=True), 'Story', 'intro_3.png')
+    for x, y in ((80, 60), (580, 80), (90, 300), (570, 290)): sp.line([at(x - 9, y), at(x + 9, y)], 3 * Z); sp.line([at(x, y - 9), at(x, y + 9)], 3 * Z)
+    save(scene([(dragon_side('awake', ks, rider=yam), 120, 40), (sp, W)], grid=True), 'Story', 'intro_3.png')
     # 4: kutunun dibi
     b = Ink(SW, SH); b.line([at(130, 40), at(130, 330), at(510, 330), at(510, 40)], 12 * Z); b.line([at(60, 40), at(130, 40)], 12 * Z); b.line([at(510, 40), at(580, 40)], 12 * Z)
     save(scene([(b, W), (piece_img('1000', 150 * Z, face='idle', hat=True), 245, 170)]), 'Story', 'intro_4.png')
-    # sonlar
-    ks = 260 * Z / 192
-    sleeping = dragon_img('sleep', ks, rider=rider(ks))
+    # sonlar: binici yerinde, ejderha uyuyor
+    ke = 320 * Z / 210
+    sleeping = dragon_side('sleep', ke, rider=piece_img('1110', int(52 * ke), hat=True))
     happy = piece_img('1001', 80 * Z, face='happy', fill=G)
-    save(scene([(sleeping, 60, 40), (bin_img(150 * Z), 440, 130), (yamali_img(90 * Z).rotate(160, resample=Image.BICUBIC, expand=True), 470, 90),
+    save(scene([(sleeping, 30, 60), (bin_img(150 * Z), 440, 130), (yamali_img(90 * Z).rotate(160, resample=Image.BICUBIC, expand=True), 470, 90),
                 (happy, 300, 270), (happy, 380, 262), (happy, 460, 272)], grid=True), 'Story', 'ending_t.png')
-    save(scene([(sleeping, 60, 40), (box_img(170 * Z), 430, 120), (yamali_img(80 * Z), 470, 110),
+    save(scene([(sleeping, 30, 60), (box_img(170 * Z), 430, 120), (yamali_img(80 * Z), 470, 110),
                 (happy, 300, 270), (happy, 380, 262), (happy, 460, 272)], grid=True), 'Story', 'ending_b.png')
-    save(scene([(sleeping, 180, 40), (piece_img('1001', 70 * Z, face='sad', fill=G), 40, 280), (piece_img('0110', 60 * Z, face='sad', fill=G), 100, 292)], grid=True), 'Story', 'ending_alone.png')
+    save(scene([(sleeping, 160, 60), (piece_img('1001', 70 * Z, face='sad', fill=G), 40, 280), (piece_img('0110', 60 * Z, face='sad', fill=G), 100, 292)], grid=True), 'Story', 'ending_alone.png')
     def dark_extra(px, oy):
         k = px / 100
         w = Ink(px, px); w.rrect(52 * k, 35 * k, 70 * k, 51 * k, 5 * k); w.line([(28 * k, 36 * k), (50 * k, 31 * k)], 3 * k)

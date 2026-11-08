@@ -463,7 +463,8 @@ namespace KayipParca
             {
                 var r = data.dragonRect;
                 dragon = MakeSprite("Ejderha", "Common/dragon_awake", new Vector3(r.x + r.width / 2f, -r.y + 1 - r.height / 2f, 0), Color.white, 4);
-                dragon.transform.localScale = new Vector3(r.width / 4f, r.height / 6f, 1);
+                var dsz = dragon.sprite ? dragon.sprite.bounds.size : new Vector3(6, 4, 1);   // sprite dikdortgeni doldurur
+                dragon.transform.localScale = new Vector3(r.width / dsz.x, r.height / dsz.y, 1);
                 chestCover = MakeSprite("GogusKapagi", "Common/chest_closed", World(data.yamali), Color.white, 5);
                 chestGlow = MakeSprite("GogusIsik", "Common/chest_glow", World(data.yamali), Color.white, 6);
                 heartSlot = data.goals.TryGetValue('Y', out var hreq) ? MakeSprite("KalpYuvasi", $"Slots/slot_{hreq}", World(data.yamali), SlotColor, 5) : null;
