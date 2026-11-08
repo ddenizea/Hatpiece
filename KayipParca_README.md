@@ -54,6 +54,15 @@ Tüm seviyeler `Tools/solver.py` ile çözülebilir olarak doğrulandı.
 
 **Yeni bölüm eklemek:** `Levels/bolumler.txt` dosyasına yeni bir `BOLUM=Bölüm 2: ...` satırı ekleyip altına seviye dosyalarını yazmak yeterli.
 
+## Görsel stil: siyah-beyaz doodle
+
+Bölüm 1 siyah zemin üstünde beyaz çizimlerle oynanır. Zemin, duvar, engel, istasyon, lazer ve yuva doodle stilinde yeniden çizildi. Karakterlerin çizimine dokunulmadı, sadece renkleri siyah-beyaza çevrildi. Kahraman beyaz; kötü parçalar ve Yamalı ters renkte (siyah gövde, beyaz kontur).
+
+- **Yuva:** kesintisiz çerçeve. Şekil uymuyorsa soluk gri, uyunca parlak beyaz olur ve nabız gibi parlayan bir ışık açılır.
+- **Duvarlar:** 16 autotile (`wall_LRUD`), dış köşeler yuvarlak. Bazı duvarlarda temaya özel küçük bir işaret var (`wallm_`). İç köşeleri `Common/fillet_*` dolguları yuvarlatır.
+- **Işık:** `ThemeManager > Monochrome` açıkken ışıklar beyaz, kamera arka planı siyah. Gece temasının karanlığı korunur. Kapatırsanız temaların renkli ışıkları geri gelir.
+- Görseller `Tools/art_doodle.py` ile üretilir: `python3 Tools/art_doodle.py .` Renkli eski hâller git geçmişinde duruyor. Hikâye ekranları ve Bölüm 2 görselleri henüz renkli.
+
 ## Kayıp parçalar ve 4 son
 
 1, 2, 4, 5, 6 ve 7. seviyelerde yolunu kaybetmiş gri bir parça var. Üstüne basınca seni bir kare arkadan takip eder. Düşman, lazer ya da ateş ona değerse korkup kendi yerine kaçar. Onu yanında yuvaya ulaşırsan kurtarılmış olur. Kurtarmak isteğe bağlı ama daha fazla hamle ister. Sayaç sağ üstte görünür ve kaydedilir.

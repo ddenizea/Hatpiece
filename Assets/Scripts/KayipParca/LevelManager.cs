@@ -53,9 +53,10 @@ namespace KayipParca
         public bool cheats = true;
 
         public static readonly string[] ThemeKeys = { "T0_Kutu", "T1_Hali", "T2_Mutfak", "T3_Oyuncak", "T4_Gece", "T5_Kedi", "T6_Masa", "T7_Resim" };
-        static readonly Color SlotColor = new Color(1f, .82f, .25f), MatchColor = new Color(.45f, 1f, .55f), CloneColor = new Color(.56f, .83f, 1f);
-        static readonly Color PathColor = new Color(.82f, .29f, .85f), FireColor = new Color(1f, .59f, .16f);
-        static readonly Color SpentStationColor = new Color(.45f, .45f, .5f, .4f);
+        // Siyah-beyaz doodle stili: yuva sekil uymuyorsa soluk, uyunca parlak beyaz + isik (bkz. Tools/art_doodle.py)
+        static readonly Color SlotColor = new Color(.47f, .47f, .47f), MatchColor = Color.white, CloneColor = new Color(.34f, .34f, .34f);
+        static readonly Color PathColor = Color.white, FireColor = new Color(.7f, .7f, .7f);
+        static readonly Color SpentStationColor = new Color(1f, 1f, 1f, .22f), CloneTint = new Color(.72f, .72f, .72f);
         const string Controls = "<size=22>WASD / Oklar: hareket    Q / E: döndür    Boşluk: bekle    Z: geri al    R: yeniden</size>";
         const string CraneControls = "<size=22>VİNÇ: WASD kancayı sürer    Boşluk: tut / bırak    Z: geri al    R: yeniden</size>";
 
@@ -95,6 +96,7 @@ namespace KayipParca
         SpriteRenderer[] stationViews = System.Array.Empty<SpriteRenderer>();   // data.stations sirasiyla
         readonly Dictionary<long, SpriteAnim> fireballs = new Dictionary<long, SpriteAnim>();
         readonly List<(SpriteRenderer sr, char key)> slots = new List<(SpriteRenderer, char)>();
+        readonly Dictionary<SpriteRenderer, SpriteRenderer> slotGlow = new Dictionary<SpriteRenderer, SpriteRenderer>();
         SpriteRenderer dragon, chestCover, chestGlow, yamaliSr, heartSlot, trolley, cable, hook, countdown;
         readonly Dictionary<string, Tile> tileCache = new Dictionary<string, Tile>();
         Tilemap shadowMap;
@@ -154,6 +156,10 @@ namespace KayipParca
 
         void LateUpdate()
         {
+            // sekli uyan yuva hafifce nabiz gibi parlar
+            float pulse = .5f + .5f * Mathf.Sin(Time.time * 4f);
+            foreach (var kv in slotGlow)
+                if (kv.Value && kv.Value.enabled) { kv.Value.color = new Color(1f, 1f, 1f, .45f + .4f * pulse); kv.Value.enabled = kv.Key && kv.Key.enabled; }
             if (!cam || !player || inScreen) return;
             var target = levelCenter + (player.transform.position - levelCenter) * cameraDrift;
             target.z = -10;
@@ -276,7 +282,7 @@ namespace KayipParca
 
             floorMap.ClearAllTiles(); wallMap.ClearAllTiles(); decorMap.ClearAllTiles(); shadowMap.ClearAllTiles();
             for (int k = objectsRoot.childCount - 1; k >= 0; k--) Destroy(objectsRoot.GetChild(k).gameObject);
-            enemyViews.Clear(); nextFrames.Clear(); laserCells.Clear(); fireWarns.Clear(); fireballs.Clear(); slots.Clear();
+            enemyViews.Clear(); nextFrames.Clear(); laserCells.Clear(); fireWarns.Clear(); fireballs.Clear(); slots.Clear(); slotGlow.Clear();
             stationViews = new SpriteRenderer[data.stations.Count];
             dragon = chestCover = chestGlow = yamaliSr = heartSlot = trolley = cable = hook = countdown = lostSr = null;
 
@@ -286,11 +292,13 @@ namespace KayipParca
                     var p = new Vector2Int(x, y);
                     char c = data.grid[x, y];
                     var cell = new Vector3Int(x, -y, 0);
-                    if (c == '#') { wallMap.SetTile(cell, GetTile(key, "wall_" + WallBits(p))); continue; }
+                    if (c == '#') { wallMap.SetTile(cell, GetTile(key, ((x * 7 + y * 3) % 3 == 0 ? "wallm_" : "wall_") + WallBits(p))); continue; }
                     int v = (x * 7 + y * 13) % 9;
                     floorMap.SetTile(cell, GetTile(key, c == ',' ? "floor_alt" : v < 7 ? "floor" : "floor_" + (v - 6)));
-                    bool wt = IsWall(p + Vector2Int.down), wl = IsWall(p + Vector2Int.left);
-                    if (wt || wl) shadowMap.SetTile(cell, GetTile(null, "Common/shadow_" + (wt && wl ? "tl" : wt ? "t" : "l")));
+                    // ic koseleri yuvarlat: iki yaninda duvar olan kosesine beyaz dolgu (sira: sol-ust, sag-ust, sol-alt, sag-alt)
+                    bool wu = IsWall(p + Vector2Int.down), wd = IsWall(p + Vector2Int.up), wl = IsWall(p + Vector2Int.left), wr = IsWall(p + Vector2Int.right);
+                    string fb = $"{(wl && wu ? 1 : 0)}{(wr && wu ? 1 : 0)}{(wl && wd ? 1 : 0)}{(wr && wd ? 1 : 0)}";
+                    if (fb != "0000") shadowMap.SetTile(cell, GetTile(null, "Common/fillet_" + fb));
                     if (c == 'o') decorMap.SetTile(cell, GetTile(key, "obstacle"));
                     if (c == 'X') decorMap.SetTile(cell, GetTile(key, "hazard"));
                     if (c == 'S') stationViews[data.stations.IndexOf(p)] = MakeSprite("Istasyon", "Common/station", World(p), Color.white, 2);
@@ -298,7 +306,7 @@ namespace KayipParca
                     if (c == 'T') MakeSprite("CopKutusu", "Common/trash", World(p), Color.white, 2);
                     if (c == 'B') MakeSprite("KorsanKutusu", "Common/pirate_box", World(p), Color.white, 2);
                     if (c != 'Y' && data.goals.TryGetValue(c, out var req))
-                        slots.Add((MakeSprite("Yuva_" + c, $"Slots/slot_{req}", World(p), c == 'g' ? CloneColor : SlotColor, 2), c));
+                        AddSlot(MakeSprite("Yuva_" + c, $"Slots/slot_{req}", World(p), c == 'g' ? CloneColor : SlotColor, 2), c, req);
                 }
 
             // dusman rotalari: iri noktalar + donus halkasi + bir sonraki adim cercevesi
@@ -338,7 +346,7 @@ namespace KayipParca
                 chestCover = MakeSprite("GogusKapagi", "Common/chest_closed", World(data.yamali), Color.white, 5);
                 chestGlow = MakeSprite("GogusIsik", "Common/chest_glow", World(data.yamali), Color.white, 6);
                 heartSlot = data.goals.TryGetValue('Y', out var hreq) ? MakeSprite("KalpYuvasi", $"Slots/slot_{hreq}", World(data.yamali), SlotColor, 5) : null;
-                if (heartSlot) slots.Add((heartSlot, 'Y'));
+                if (heartSlot) AddSlot(heartSlot, 'Y', hreq);
                 yamaliSr = MakeSprite("Yamali", "Common/yamali", World(data.yamali), Color.white, 10);
                 yamaliSr.gameObject.AddComponent<SpriteAnim>().follow = true;
                 // kafanin ustunde: bir sonraki atese kalan tur
@@ -364,7 +372,7 @@ namespace KayipParca
             }
 
             player = PieceView.Create(piecePrefab, objectsRoot, data.shape, true, Color.white, 6);
-            clone = data.hasClone ? PieceView.Create(piecePrefab, objectsRoot, Shape.Mirror(data.shape), false, new Color(.56f, .83f, 1f, .85f), 6) : null;
+            clone = data.hasClone ? PieceView.Create(piecePrefab, objectsRoot, Shape.Mirror(data.shape), false, CloneTint, 6) : null;
 
             SetupCameraAndBackground(key);
             ResetState();
@@ -380,7 +388,7 @@ namespace KayipParca
         {
             var n = new[] { p + Vector2Int.left, p + Vector2Int.right, p + Vector2Int.down, p + Vector2Int.up };
             var b = new char[4];
-            for (int k = 0; k < 4; k++) b[k] = Inside(n[k]) && !IsWall(n[k]) ? '1' : '0';
+            for (int k = 0; k < 4; k++) b[k] = !IsWall(n[k]) ? '1' : '0';   // harita disi da acik sayilir: dis koseler yuvarlak
             return new string(b);
         }
 
@@ -623,7 +631,12 @@ namespace KayipParca
                 if (snap || !s.following) lostSr.transform.position = World(s.f);
             }
             foreach (var (sr, key) in slots)
-                if (sr) sr.color = key == 'g' ? (s.cs == data.goals['g'] ? MatchColor : CloneColor) : (s.ps == data.goals[key] ? MatchColor : SlotColor);
+            {
+                if (!sr) continue;
+                bool fits = key == 'g' ? s.cs == data.goals['g'] : s.ps == data.goals[key];
+                sr.color = fits ? MatchColor : key == 'g' ? CloneColor : SlotColor;
+                if (slotGlow.TryGetValue(sr, out var gl) && gl) gl.enabled = fits && sr.enabled;
+            }
             if (movesText)
             {
                 movesText.verticalOverflow = VerticalWrapMode.Overflow;
@@ -823,12 +836,12 @@ namespace KayipParca
             if (g1 != '\0')
             {
                 hudGoal.sprite = SpriteBank.Get($"Player/body_{data.goals[g1]}");
-                hudGoal.color = SlotColor;
+                hudGoal.color = Color.white;
                 hudGoal.GetComponentInChildren<Text>().text = g1 == 'Y' ? "Kalp" : "Hedef";
             }
             bool two = g1 == 'G' && data.goals.ContainsKey('E');
             hudGoal2.gameObject.SetActive(two);
-            if (two) { hudGoal2.sprite = SpriteBank.Get($"Player/body_{data.goals['E']}"); hudGoal2.color = SlotColor; }
+            if (two) { hudGoal2.sprite = SpriteBank.Get($"Player/body_{data.goals['E']}"); hudGoal2.color = Color.white; }
         }
 
         Image MakeIcon(Transform parent, string label, Vector2 pos)
@@ -876,6 +889,15 @@ namespace KayipParca
             t.sprite = SpriteBank.Get(path);
             tileCache[path] = t;
             return t;
+        }
+
+        void AddSlot(SpriteRenderer sr, char key, string shape)
+        {
+            slots.Add((sr, key));
+            var gl = MakeSprite("YuvaIsigi", $"Slots/glow_{shape}", sr.transform.position, Color.white, sr.sortingOrder - 1);
+            gl.transform.SetParent(sr.transform, true);
+            gl.enabled = false;
+            slotGlow[sr] = gl;
         }
 
         SpriteRenderer MakeSprite(string n, string spritePath, Vector3 pos, Color col, int order)

@@ -42,6 +42,16 @@ namespace KayipParca
 
         public Theme[] themes = Defaults();
 
+        [Tooltip("Siyah-beyaz doodle stili: isiklar beyaz, arka plan siyah. Kapatilirsa temalarin renkli isiklari geri gelir.")]
+        public bool monochrome = true;
+
+        Color GlobalColor(Theme th) => monochrome ? Color.white : th.globalColor;
+        Color PlayerColor(Theme th) => monochrome ? Color.white : th.playerLightColor;
+        Color CameraColor(Theme th) => monochrome ? Color.black : th.cameraColor;
+        // gece temasi (karanlik mekanigi) karanlik kalir, digerleri tam parlak beyaz
+        float GlobalIntensity(Theme th) => monochrome ? (th.globalIntensity < .5f ? th.globalIntensity : 1f) : th.globalIntensity;
+        float PlayerIntensity(Theme th) => monochrome ? (th.globalIntensity < .5f ? th.playerLightIntensity : .15f) : th.playerLightIntensity;
+
         /// Tema sirasi = seviye dosyasindaki THEME numarasi.
         public static Theme[] Defaults() => new[]
         {
@@ -91,19 +101,19 @@ namespace KayipParca
             current = th;
             SwapClip(musicSource, th.music);
             SwapClip(ambienceSource, th.ambience);
-            if (playerLight) { playerLight.color = th.playerLightColor; playerLight.pointLightOuterRadius = th.playerLightRadius; playerLight.pointLightInnerRadius = th.playerLightRadius * .2f; }
-            if (globalLight) globalLight.color = th.globalColor;
+            if (playerLight) { playerLight.color = PlayerColor(th); playerLight.pointLightOuterRadius = th.playerLightRadius; playerLight.pointLightInnerRadius = th.playerLightRadius * .2f; }
+            if (globalLight) globalLight.color = GlobalColor(th);
             for (float t = 0; t < fadeInTime; t += Time.deltaTime)
             {
                 float k = Mathf.SmoothStep(0, 1, t / fadeInTime);
                 intensityScale = k;
-                if (cam) cam.backgroundColor = Color.Lerp(prevCam, th.cameraColor, k);
+                if (cam) cam.backgroundColor = Color.Lerp(prevCam, CameraColor(th), k);
                 if (musicSource) musicSource.volume = th.musicVolume * k;
                 if (ambienceSource) ambienceSource.volume = th.ambienceVolume * k;
                 yield return null;
             }
             intensityScale = 1;
-            if (cam) cam.backgroundColor = th.cameraColor;
+            if (cam) cam.backgroundColor = CameraColor(th);
         }
 
         static void SwapClip(AudioSource src, AudioClip clip)
@@ -124,8 +134,8 @@ namespace KayipParca
         {
             if (current == null) return;
             float pulse = 1f + current.pulse * Mathf.Sin(Time.time * 2.4f);
-            if (globalLight) globalLight.intensity = current.globalIntensity * intensityScale * pulse;
-            if (playerLight) playerLight.intensity = current.playerLightIntensity * intensityScale;
+            if (globalLight) globalLight.intensity = GlobalIntensity(current) * intensityScale * pulse;
+            if (playerLight) playerLight.intensity = PlayerIntensity(current) * intensityScale;
         }
     }
 }
