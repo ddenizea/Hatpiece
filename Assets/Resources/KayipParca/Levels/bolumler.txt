@@ -8,5 +8,6 @@ level5
 level6
 level7
 level8
-BOLUM=Bölüm 2: Yama Korsanları
-@Bolum2
+# Eski şerit savaşı (Assets/Scenes/Bolum2.unity) oyundan çıkarıldı, dosyaları duruyor.
+BOLUM=Bölüm 2: Yamalı'nın İntikamı
+@Yamali
