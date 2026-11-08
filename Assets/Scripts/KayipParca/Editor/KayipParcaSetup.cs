@@ -267,33 +267,15 @@ namespace KayipParca.EditorTools
             var amb = Src("Ambiyans", true);
             var sfx = Src("Efektler", false);
 
-            // UI
-            var canvasGo = new GameObject("UI", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-            var canvas = canvasGo.GetComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            var scaler = canvasGo.GetComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
-            scaler.matchWidthOrHeight = .5f;
-            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            Text MakeText(string n, Vector2 anchor, Vector2 pos, int size, TextAnchor align, Vector2 box)
-            {
-                var go = new GameObject(n, typeof(RectTransform), typeof(Text));
-                go.transform.SetParent(canvasGo.transform, false);
-                var rt = go.GetComponent<RectTransform>();
-                rt.anchorMin = rt.anchorMax = rt.pivot = anchor;
-                rt.anchoredPosition = pos; rt.sizeDelta = box;
-                var t = go.GetComponent<Text>();
-                t.font = font; t.fontSize = size; t.alignment = align; t.color = Color.white;
-                t.fontStyle = FontStyle.Bold;
-                var sh = go.AddComponent<Outline>(); sh.effectColor = new Color(0, 0, 0, .8f); sh.effectDistance = new Vector2(3, -3);
-                return t;
-            }
-            var title = MakeText("Baslik", new Vector2(0, 1), new Vector2(40, -30), 44, TextAnchor.UpperLeft, new Vector2(1000, 80));
-            var moves = MakeText("Hamle", new Vector2(1, 1), new Vector2(-40, -30), 44, TextAnchor.UpperRight, new Vector2(500, 80));
-            var msg = MakeText("Mesaj", new Vector2(.5f, .5f), Vector2.zero, 64, TextAnchor.MiddleCenter, new Vector2(1600, 500));
-            var hint = MakeText("Ipucu", new Vector2(.5f, 0), new Vector2(0, 24), 28, TextAnchor.LowerCenter, new Vector2(1800, 60));
-            hint.fontStyle = FontStyle.Normal;
+            // UI: yerlesim LevelManager.LayoutHudTexts'te (oyun basinda da yeniden uygulanir)
+            var canvasGo = UIKit.MakeCanvas("UI").gameObject;
+            var font = UIKit.DefaultFont;
+            Text MakeText(string n) => UIKit.MakeText(canvasGo.transform, n, font, 32, TextAnchor.MiddleCenter);
+            var title = MakeText("Baslik");
+            var moves = MakeText("Hamle");
+            var msg = MakeText("Mesaj");
+            var hint = MakeText("Ipucu");
+            LevelManager.LayoutHudTexts(title, moves, msg, hint);
 
             // Yoneticiler
             var game = new GameObject("Oyun");

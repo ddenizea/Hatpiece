@@ -4,7 +4,7 @@ MOVES=26
 SHAPE=1100
 GOAL_G=0110
 GOAL_g=0011
-HINT=Mavi klon seni aynada izler: sen sağa gidersen o sola gider. İkiniz de yuvanıza oturmalısınız.
+HINT=Ayna klonun seni aynada izler: sen sağa gidersen o sola gider. İkiniz de yuvanıza oturmalısınız.
 STORY=Su birikintisindeki yansıman canlandı. Onu da yuvasına götür.
 MAP
 #################

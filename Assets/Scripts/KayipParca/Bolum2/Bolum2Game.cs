@@ -73,7 +73,6 @@ namespace KayipParca
         int bossPhase;   // 1 zirhli toplar, 2 savunmasiz toplar, 3 kaptan
 
         // arayuz
-        Font font;
         Text msgText, hintText, infText, bossText;
         RectTransform infFill, bossFill; GameObject bossBar;
         readonly List<Image> heartIcons = new List<Image>();
@@ -699,70 +698,65 @@ namespace KayipParca
         }
 
         // ------------------------------------------------------------------ arayuz
+        /// HUD yerlesimi (1920x1080 tuval birimi, Expand: tuval her oranda en az bu kadar):
+        ///  - Sol ust: kalpler, altinda yama virusu cubugu + guc yazisi (ejderhanin ustu bos gokyuzu)
+        ///  - Ust orta: boss adi + cubugu. Sag taraf bos birakilir: korsan gemisi ve kaptan orada duruyor.
+        ///  - Orta: mesajlar (yaziya oturan koyu zemin)   - Alt: tus ipucu (kenarlara gerilir)
+        const float HeartSize = 72f, HeartGap = 10f, HeartTop = 26f;
+        const float InfTop = HeartTop + HeartSize + 18f, InfWidth = 460f, InfHeight = 24f;
+        const float BossTop = 66f, BossWidth = 620f, BossHeight = 26f;
+
         void SetupUI()
         {
-            font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            var cgo = new GameObject("UI", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-            var canvas = cgo.GetComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            var sc = cgo.GetComponent<CanvasScaler>(); sc.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            sc.referenceResolution = new Vector2(1920, 1080); sc.matchWidthOrHeight = .5f;
-            var root = cgo.transform;
+            var root = UIKit.MakeCanvas("UI").transform;
+
+            var hrow = UIKit.MakeRect(root, "Kalpler");
+            UIKit.Pin(hrow, new Vector2(0, 1), new Vector2(UIKit.Margin, -HeartTop), new Vector2(maxHearts * (HeartSize + HeartGap), HeartSize));
+            var hl = hrow.gameObject.AddComponent<HorizontalLayoutGroup>();
+            hl.spacing = HeartGap; hl.childAlignment = TextAnchor.UpperLeft;
+            hl.childControlWidth = hl.childControlHeight = false; hl.childForceExpandWidth = hl.childForceExpandHeight = false;
             for (int i = 0; i < maxHearts; i++)
             {
-                var img = UIImage(root, "Kalp", new Vector2(0, 1), new Vector2(40 + i * 86, -30), new Vector2(76, 76), Color.white);
+                var img = UIKit.MakeImage(hrow, "Kalp", Color.white);
+                img.rectTransform.sizeDelta = new Vector2(HeartSize, HeartSize);
                 img.sprite = SpriteBank.Get("Player/body_1111"); img.preserveAspect = true; heartIcons.Add(img);
                 var ol = img.gameObject.AddComponent<Outline>(); ol.effectColor = new Color(.1f, .05f, .1f, .9f); ol.effectDistance = new Vector2(3, -3);
             }
-            UIImage(root, "VirusZemin", new Vector2(.5f, 1), new Vector2(-300, -40), new Vector2(600, 34), new Color(.1f, .08f, .15f, .85f));
-            infFill = UIImage(root, "VirusDolu", new Vector2(.5f, 1), new Vector2(-300, -40), new Vector2(0, 34), new Color(.62f, .35f, .95f)).rectTransform;
-            infText = UIText(root, "VirusYazi", new Vector2(.5f, 1), new Vector2(-300, -82), new Vector2(600, 40), 28, TextAnchor.UpperCenter);
-            bossBar = new GameObject("BossBar", typeof(RectTransform)); bossBar.transform.SetParent(root, false);
-            Stretch((RectTransform)bossBar.transform, 0, 0, 1, 1);
-            UIImage(bossBar.transform, "BossZemin", new Vector2(1, 1), new Vector2(-560, -40), new Vector2(520, 30), new Color(.15f, .05f, .05f, .85f));
-            bossFill = UIImage(bossBar.transform, "BossDolu", new Vector2(1, 1), new Vector2(-560, -40), new Vector2(520, 30), new Color(1f, .3f, .3f)).rectTransform;
-            bossText = UIText(bossBar.transform, "BossYazi", new Vector2(1, 1), new Vector2(-560, -76), new Vector2(520, 36), 26, TextAnchor.UpperRight);
+
+            var inf = UIKit.MakeBar(root, "Virus", new Color(.1f, .08f, .15f, .85f), new Color(.62f, .35f, .95f), out infFill);
+            UIKit.Pin(inf.rectTransform, new Vector2(0, 1), new Vector2(UIKit.Margin, -InfTop), new Vector2(InfWidth, InfHeight));
+            infText = UIKit.MakeText(inf.transform, "VirusYazi", UIKit.Hud, 26, TextAnchor.UpperLeft);
+            UnderBar(infText.rectTransform, 360, leftAligned: true);   // cubuktan genis: guc aciklamasi tek satira sigsin
+
+            var boss = UIKit.MakeBar(root, "BossBar", new Color(.15f, .05f, .05f, .85f), new Color(1f, .3f, .3f), out bossFill);
+            UIKit.Pin(boss.rectTransform, new Vector2(.5f, 1), new Vector2(0, -BossTop), new Vector2(BossWidth, BossHeight));
+            bossBar = boss.gameObject;
+            bossText = UIKit.MakeText(boss.transform, "BossYazi", UIKit.Hud, 32, TextAnchor.LowerCenter);
+            var brt = bossText.rectTransform;   // adi cubugun hemen ustunde
+            brt.anchorMin = new Vector2(0, 1); brt.anchorMax = new Vector2(1, 1); brt.pivot = new Vector2(.5f, 0);
+            brt.anchoredPosition = new Vector2(0, 4); brt.sizeDelta = new Vector2(200, 40);
             bossBar.SetActive(false);
-            msgText = UIText(root, "Mesaj", new Vector2(.5f, .5f), new Vector2(-800, 200), new Vector2(1600, 300), 46, TextAnchor.MiddleCenter);
-            hintText = UIText(root, "Ipucu", new Vector2(.5f, 0), new Vector2(-900, 20), new Vector2(1800, 50), 26, TextAnchor.LowerCenter);
+
+            msgText = UIKit.MakeText(root, "Mesaj", UIKit.Body, 46, TextAnchor.MiddleCenter);
+            UIKit.Stretch(msgText.rectTransform, .14f, .42f, .86f, .74f);
+            UIKit.AddBackdrop(msgText, UIKit.BackdropColor, UIKit.BackdropPad);   // acik gokyuzu ustunde okunsun
+            hintText = UIKit.MakeText(root, "Ipucu", UIKit.BodyLight, 26, TextAnchor.LowerCenter);
+            UIKit.BottomBand(hintText.rectTransform, 80, 80, 20, 50);
             hintText.text = T("HINT", "W / S: şerit değiştir    Boşluk: ateş (basılı tutabilirsin)");
             UpdateHud();
         }
 
-        Image UIImage(Transform parent, string n, Vector2 anchor, Vector2 pos, Vector2 size, Color col)
+        /// Bir cubugun hemen altina yazi. extra: cubuktan ne kadar genis olsun (sola hizaliysa saga dogru uzar).
+        static void UnderBar(RectTransform rt, float extra, bool leftAligned = false)
         {
-            var go = new GameObject(n, typeof(RectTransform), typeof(Image));
-            go.transform.SetParent(parent, false);
-            var rt = (RectTransform)go.transform;
-            rt.anchorMin = rt.anchorMax = anchor; rt.pivot = new Vector2(0, 1);
-            rt.anchoredPosition = pos; rt.sizeDelta = size;
-            var img = go.GetComponent<Image>(); img.color = col;
-            return img;
-        }
-
-        Text UIText(Transform parent, string n, Vector2 anchor, Vector2 pos, Vector2 size, int fs, TextAnchor align)
-        {
-            var go = new GameObject(n, typeof(RectTransform), typeof(Text));
-            go.transform.SetParent(parent, false);
-            var rt = (RectTransform)go.transform;
-            rt.anchorMin = rt.anchorMax = anchor; rt.pivot = new Vector2(0, 1);
-            rt.anchoredPosition = pos; rt.sizeDelta = size;
-            var t = go.GetComponent<Text>();
-            t.font = font; t.fontSize = fs; t.alignment = align; t.color = Color.white; t.fontStyle = FontStyle.Bold;
-            t.horizontalOverflow = HorizontalWrapMode.Wrap; t.verticalOverflow = VerticalWrapMode.Overflow;
-            var o = go.AddComponent<Outline>(); o.effectColor = new Color(0, 0, 0, .8f); o.effectDistance = new Vector2(3, -3);
-            return t;
-        }
-
-        static void Stretch(RectTransform rt, float x0, float y0, float x1, float y1)
-        {
-            rt.anchorMin = new Vector2(x0, y0); rt.anchorMax = new Vector2(x1, y1);
-            rt.offsetMin = rt.offsetMax = Vector2.zero;
+            rt.anchorMin = new Vector2(0, 0); rt.anchorMax = new Vector2(1, 0); rt.pivot = new Vector2(leftAligned ? 0 : .5f, 1);
+            rt.anchoredPosition = new Vector2(0, -6); rt.sizeDelta = new Vector2(extra, 36);
         }
 
         void UpdateHud()
         {
             for (int i = 0; i < heartIcons.Count; i++) heartIcons[i].color = i < hearts ? new Color(1f, .32f, .38f) : new Color(.3f, .3f, .35f, .5f);
-            if (infFill) infFill.sizeDelta = new Vector2(600f * infection / 100f, 34);
+            UIKit.SetFill(infFill, infection / 100f);
             if (infText)
             {
                 string power = infection >= 75 ? "  ·  gülleleri yakar, çift hasar" : infection >= 50 ? "  ·  delici mor ateş" : infection >= 25 ? "  ·  hızlı ateş" : "";
@@ -771,7 +765,7 @@ namespace KayipParca
             if (bossActive && bossFill)
             {
                 float v = bossPhase == 3 ? captainHp / (float)CaptainMax : (cannonHp[0] + cannonHp[1] + cannonHp[2]) / 9f;
-                bossFill.sizeDelta = new Vector2(520f * Mathf.Clamp01(v), 30);
+                UIKit.SetFill(bossFill, v);
                 bossText.text = bossPhase == 3 ? "YAMA KAPTAN" : bossPhase == 1 ? "KORSAN GEMİSİ (zırhlı)" : "KORSAN GEMİSİ: topları sustur";
             }
         }
@@ -799,20 +793,7 @@ namespace KayipParca
         void EnsureScreen()
         {
             if (screenRoot) return;
-            var canvas = msgText.canvas.transform;
-            screenRoot = new GameObject("HikayeEkrani", typeof(RectTransform), typeof(Image));
-            screenRoot.transform.SetParent(canvas, false);
-            Stretch((RectTransform)screenRoot.transform, 0, 0, 1, 1);
-            screenRoot.GetComponent<Image>().color = new Color(.04f, .04f, .06f, 1f);
-            var pic = new GameObject("Resim", typeof(RectTransform), typeof(Image));
-            pic.transform.SetParent(screenRoot.transform, false);
-            Stretch((RectTransform)pic.transform, .08f, .3f, .92f, .97f);
-            screenPic = pic.GetComponent<Image>(); screenPic.preserveAspect = true;
-            screenText = UIText(screenRoot.transform, "Yazi", Vector2.zero, Vector2.zero, Vector2.zero, 40, TextAnchor.MiddleCenter);
-            Stretch(screenText.rectTransform, .08f, .08f, .92f, .29f);
-            screenPrompt = UIText(screenRoot.transform, "Ipucu", Vector2.zero, Vector2.zero, Vector2.zero, 24, TextAnchor.MiddleCenter);
-            Stretch(screenPrompt.rectTransform, .08f, .01f, .92f, .08f);
-            screenPrompt.color = new Color(1f, .82f, .3f);
+            screenRoot = UIKit.MakeStoryScreen(msgText.canvas.transform, out screenPic, out screenText, out screenPrompt);
         }
 
         // ------------------------------------------------------------------ girdi

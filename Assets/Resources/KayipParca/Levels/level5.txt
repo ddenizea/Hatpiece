@@ -7,7 +7,7 @@ LASER=6,0,S,2,1,0
 LASER=10,0,S,2,2,1
 LASER=0,5,E,1,2,2
 STORY=Ejderha lazer işaretçiyi açtı! Lazerler yanıp sönüyor.
-HINT=Kırmızı lazer yanarken üstünde durma. Boşluk tuşu bir tur bekletir.
+HINT=Lazer yanarken üstünde durma. Boşluk tuşu bir tur bekletir.
 MAP
 ################
 #P..#.......#..#

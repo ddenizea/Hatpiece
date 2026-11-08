@@ -60,6 +60,11 @@ namespace KayipParca
         const string Controls = "<size=22>WASD / Oklar: hareket    Q / E: döndür    Boşluk: bekle    Z: geri al    R: yeniden</size>";
         const string CraneControls = "<size=22>VİNÇ: WASD kancayı sürer    Boşluk: tut / bırak    Z: geri al    R: yeniden</size>";
 
+        // HUD yerlesimi (1920x1080 tuval birimi). Kamera tahtayi bu bantlarin arasina sigdirir.
+        const float HudTop = 24f, IconSize = 96f, IconLabel = 32f, IconGap = 26f, MovesWidth = 300f;
+        const float TopReserve = HudTop + IconSize + IconLabel + 18f;   // ust bant: baslik, hamle, sekil ikonlari
+        const float BottomReserve = 128f;                               // alt bant: ipucu + kontroller
+
         enum Death { None, Hazard, Enemy, Laser, Fire, Moves }
 
         /// Baska bir bolum sahnesinden (or. Bolum 2) donerken hangi siradan devam edilecegi. -1 = baslik ekrani.
@@ -100,9 +105,13 @@ namespace KayipParca
         SpriteRenderer dragon, chestCover, chestGlow, yamaliSr, heartSlot, trolley, cable, hook, countdown;
         readonly Dictionary<string, Tile> tileCache = new Dictionary<string, Tile>();
         Tilemap shadowMap;
-        Vector3 levelCenter;
+        Vector3 levelCenter;             // tahtanin ortasi
+        Vector3 camCenter;               // kameranin dinlenme noktasi (HUD bantlari icin kaydirilmis)
+        string themeKey;
+        Vector2Int lastScreen;
         Camera cam;
         Image hudNow, hudGoal, hudGoal2;
+        RectTransform hudIcons;
         GameObject screenRoot; Image screenPic; Text screenText, screenPrompt;
 
         // hileler
@@ -122,6 +131,7 @@ namespace KayipParca
                 return;
             }
             cam = Camera.main;
+            LayoutHud();
             entries = Chapters.Load();
             LoadRescued();
             foreach (var e in entries)
@@ -161,7 +171,8 @@ namespace KayipParca
             foreach (var kv in slotGlow)
                 if (kv.Value && kv.Value.enabled) { kv.Value.color = new Color(1f, 1f, 1f, .45f + .4f * pulse); kv.Value.enabled = kv.Key && kv.Key.enabled; }
             if (!cam || !player || inScreen) return;
-            var target = levelCenter + (player.transform.position - levelCenter) * cameraDrift;
+            if (data != null && (Screen.width != lastScreen.x || Screen.height != lastScreen.y)) SetupCameraAndBackground(themeKey, snap: false);
+            var target = camCenter + (player.transform.position - levelCenter) * cameraDrift;
             target.z = -10;
             cam.transform.position = Vector3.Lerp(cam.transform.position, target, 1f - Mathf.Exp(-3f * Time.deltaTime));
             if (themes) themes.FollowPlayer(s.crane && hook ? hook.transform.position : player.transform.position);
@@ -218,35 +229,67 @@ namespace KayipParca
         {
             if (screenRoot) return;
             var canvas = (messageText ? messageText.canvas : FindAnyObjectByType<Canvas>()).transform;
-            screenRoot = new GameObject("HikayeEkrani", typeof(RectTransform), typeof(Image));
-            screenRoot.transform.SetParent(canvas, false);
-            Stretch((RectTransform)screenRoot.transform, 0, 0, 1, 1);
-            screenRoot.GetComponent<Image>().color = new Color(.04f, .04f, .06f, 1f);
-            var pic = new GameObject("Resim", typeof(RectTransform), typeof(Image));
-            pic.transform.SetParent(screenRoot.transform, false);
-            Stretch((RectTransform)pic.transform, .08f, .3f, .92f, .97f);
-            screenPic = pic.GetComponent<Image>(); screenPic.preserveAspect = true;
-            screenText = MakeScreenText("Yazi", .08f, .08f, .92f, .29f, 40);
-            screenPrompt = MakeScreenText("Ipucu", .08f, .01f, .92f, .08f, 24);
-            screenPrompt.color = new Color(1f, .82f, .3f);
+            screenRoot = UIKit.MakeStoryScreen(canvas, out screenPic, out screenText, out screenPrompt);
         }
 
-        Text MakeScreenText(string n, float x0, float y0, float x1, float y1, int size)
+        // ------------------------------------------------------------------ HUD yerlesimi
+        /// Sahnede kayitli HUD metinlerini kenarlarina sabitler. Kurulum menusu de ayni yerlesimi kullanir,
+        /// oyun basinda tekrar uygulandigi icin eski sahneler de duzelir.
+        ///  - Sol ust: baslik (sag ustteki hamle + ikon bloguna kadar gerilir, sigmazsa kuculur)
+        ///  - Sag ust: hamle sayaci, onun saginda Sen / Hedef ikonlari
+        ///  - Orta: mesajlar (ekranin %84'u genisliginde, sarar)
+        ///  - Alt: ipucu + kontroller (kenarlara gerilir, yukari dogru buyur)
+        public static void LayoutHudTexts(Text title, Text moves, Text message, Text hint, int iconCount = 0)
         {
-            var go = new GameObject(n, typeof(RectTransform), typeof(Text));
-            go.transform.SetParent(screenRoot.transform, false);
-            Stretch((RectTransform)go.transform, x0, y0, x1, y1);
-            var t = go.GetComponent<Text>();
-            t.font = messageText ? messageText.font : Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            t.fontSize = size; t.alignment = TextAnchor.MiddleCenter; t.color = Color.white;
-            t.horizontalOverflow = HorizontalWrapMode.Wrap; t.verticalOverflow = VerticalWrapMode.Overflow;
-            return t;
+            var cs = title ? title.GetComponentInParent<CanvasScaler>() : null;
+            UIKit.ConfigureScaler(cs);
+            float right = UIKit.Margin + MovesBlockWidth(iconCount);
+            if (title)
+            {
+                UIKit.Style(title, UIKit.Hud, 42, TextAnchor.MiddleLeft);
+                UIKit.TopBand(title.rectTransform, UIKit.Margin, right + 30, HudTop, IconSize);
+                UIKit.BestFit(title, 24, 42);
+            }
+            if (moves)
+            {
+                UIKit.Style(moves, UIKit.Hud, 42, TextAnchor.MiddleRight);
+                PlaceMoves(moves, iconCount);
+            }
+            if (message)
+            {
+                UIKit.Style(message, UIKit.Body, 60, TextAnchor.MiddleCenter);
+                UIKit.Stretch(message.rectTransform, .08f, .2f, .92f, .8f);
+            }
+            if (hint)
+            {
+                UIKit.Style(hint, UIKit.BodyLight, 28, TextAnchor.LowerCenter);
+                UIKit.BottomBand(hint.rectTransform, 80, 80, 18, BottomReserve - 26);
+            }
         }
 
-        static void Stretch(RectTransform rt, float x0, float y0, float x1, float y1)
+        static float MovesBlockWidth(int iconCount) => MovesWidth + iconCount * (IconSize + IconGap);
+
+        static void PlaceMoves(Text moves, int iconCount) =>
+            UIKit.Pin(moves.rectTransform, new Vector2(1, 1), new Vector2(-UIKit.Margin - iconCount * (IconSize + IconGap), -HudTop), new Vector2(MovesWidth, IconSize));
+
+        void LayoutHud()
         {
-            rt.anchorMin = new Vector2(x0, y0); rt.anchorMax = new Vector2(x1, y1);
-            rt.offsetMin = rt.offsetMax = Vector2.zero;
+            LayoutHudTexts(titleText, movesText, messageText, hintText);
+            // orta mesajlar acik renkli duvarlarin ustune de dusebilir: arkalarina yaziya oturan koyu zemin
+            if (messageText && !messageText.transform.parent.Find(messageText.name + "_Zemin"))
+                UIKit.AddBackdrop(messageText, UIKit.BackdropColor, UIKit.BackdropPad);
+            var canvasText = movesText ? movesText : titleText ? titleText : messageText;
+            if (!canvasText || hudIcons) return;
+            // Sekil ikonlari: sag ustte, sagdan sola dolar; gizlenen ikonun yeri kalmaz
+            hudIcons = UIKit.MakeRect(canvasText.canvas.transform, "SekilIkonlari");
+            UIKit.Pin(hudIcons, new Vector2(1, 1), new Vector2(-UIKit.Margin, -HudTop), new Vector2(3 * IconSize + 2 * IconGap, IconSize));
+            var row = hudIcons.gameObject.AddComponent<HorizontalLayoutGroup>();
+            row.childAlignment = TextAnchor.UpperRight; row.spacing = IconGap;
+            row.childControlWidth = row.childControlHeight = false;
+            row.childForceExpandWidth = row.childForceExpandHeight = false;
+            hudNow = MakeIcon(hudIcons, "Sen");
+            hudGoal = MakeIcon(hudIcons, "Hedef");
+            hudGoal2 = MakeIcon(hudIcons, "Hedef 2");
         }
 
         // ------------------------------------------------------------------ seviye yukleme
@@ -402,12 +445,21 @@ namespace KayipParca
             var fr = floorMap.GetComponent<TilemapRenderer>(); if (fr) fr.sortingOrder = -1;
         }
 
-        void SetupCameraAndBackground(string key)
+        /// Tahtayi ust ve alt HUD bantlarinin arasina sigdirir; pencere boyutu degisince LateUpdate tekrar cagirir.
+        void SetupCameraAndBackground(string key, bool snap = true)
         {
+            themeKey = key;
+            lastScreen = new Vector2Int(Screen.width, Screen.height);
             levelCenter = new Vector3(data.width / 2f, -data.height / 2f + 1f, 0);
-            float margin = data.theme == 5 ? 2.2f : 1.4f;
-            cam.orthographicSize = Mathf.Max(data.height / 2f + margin, (data.width / 2f + margin) / cam.aspect);
-            cam.transform.position = new Vector3(levelCenter.x, levelCenter.y, -10);
+            float k = UIKit.ScaleFactor();
+            float top = Mathf.Clamp01(TopReserve * k / Mathf.Max(1, Screen.height));
+            float bottom = Mathf.Clamp01(BottomReserve * k / Mathf.Max(1, Screen.height));
+            float free = Mathf.Max(.4f, 1f - top - bottom);              // ekran yuksekliginin tahtaya kalan payi
+            float marginX = data.theme == 5 ? 2.2f : 1.4f, marginY = data.theme == 5 ? 1.2f : .45f;
+            cam.orthographicSize = Mathf.Max((data.height / 2f + marginY) / free, (data.width / 2f + marginX) / cam.aspect);
+            // serbest bolgenin ortasi ekran ortasindan (top - bottom) / 2 kadar asagida: kamerayi o kadar yukari al
+            camCenter = levelCenter + new Vector3(0, (top - bottom) * cam.orthographicSize, 0);
+            if (snap) cam.transform.position = new Vector3(camCenter.x, camCenter.y, -10);
 
             float viewH = cam.orthographicSize * 2f, viewW = viewH * cam.aspect;
             foreach (var (sr, file, factor) in new[] { (bgFar, "bg_far", .9f), (bgNear, "bg_near", .75f) })
@@ -418,7 +470,7 @@ namespace KayipParca
                 var size = sr.sprite.bounds.size;
                 float sc = Mathf.Max(viewW * 1.3f / size.x, viewH * 1.3f / size.y);
                 sr.transform.localScale = new Vector3(sc, sc, 1);
-                var origin = levelCenter;
+                var origin = camCenter;
                 if (data.theme == 5 && sr == bgNear) origin.y += viewH * .43f - size.y * sc * .236f;
                 var px = sr.GetComponent<ParallaxLayer>();
                 if (!px) px = sr.gameObject.AddComponent<ParallaxLayer>();
@@ -639,15 +691,12 @@ namespace KayipParca
             }
             if (movesText)
             {
-                movesText.verticalOverflow = VerticalWrapMode.Overflow;
                 int total = LostTotal();
-                movesText.text = $"Hamle: {s.moves}" + (total > 0 ? $"\n<size=30>Kurtarılan: {RescuedCount()}/{total}</size>" : "");
+                movesText.text = $"Hamle: {s.moves}" + (total > 0 ? $"\n<size=28>Kurtarılan: {RescuedCount()}/{total}</size>" : "");
             }
             if (hudNow) hudNow.sprite = SpriteBank.Get($"Player/body_{s.ps}");
             if (hintText)
             {
-                hintText.horizontalOverflow = HorizontalWrapMode.Wrap;
-                hintText.verticalOverflow = VerticalWrapMode.Overflow;
                 hintText.text = (string.IsNullOrEmpty(data.hint) ? "" : data.hint + "\n") + (s.crane ? CraneControls : Controls);
             }
         }
@@ -822,14 +871,7 @@ namespace KayipParca
         // ------------------------------------------------------------------ sekil gostergesi (Sen / Hedef)
         void SetupShapeHud()
         {
-            if (!movesText) return;
-            if (!hudNow)
-            {
-                var parent = movesText.canvas.transform;
-                hudNow = MakeIcon(parent, "Sen", new Vector2(-230, -110));
-                hudGoal = MakeIcon(parent, "Hedef", new Vector2(-70, -110));
-                hudGoal2 = MakeIcon(parent, "Hedef 2", new Vector2(-70, -270));
-            }
+            if (!hudNow) return;
             hudNow.sprite = SpriteBank.Get($"Player/body_{data.shape}");
             char g1 = data.goals.ContainsKey('G') ? 'G' : data.goals.ContainsKey('Y') ? 'Y' : data.goals.ContainsKey('E') ? 'E' : '\0';
             hudGoal.gameObject.SetActive(g1 != '\0');
@@ -842,29 +884,22 @@ namespace KayipParca
             bool two = g1 == 'G' && data.goals.ContainsKey('E');
             hudGoal2.gameObject.SetActive(two);
             if (two) { hudGoal2.sprite = SpriteBank.Get($"Player/body_{data.goals['E']}"); hudGoal2.color = Color.white; }
+            // hamle sayaci ve baslik, gorunen ikon sayisina gore yer acar
+            int icons = 1 + (g1 != '\0' ? 1 : 0) + (two ? 1 : 0);
+            if (movesText) PlaceMoves(movesText, icons);
+            if (titleText) UIKit.TopBand(titleText.rectTransform, UIKit.Margin, UIKit.Margin + MovesBlockWidth(icons) + 30, HudTop, IconSize);
         }
 
-        Image MakeIcon(Transform parent, string label, Vector2 pos)
+        Image MakeIcon(Transform parent, string label)
         {
-            var go = new GameObject("Ikon_" + label, typeof(RectTransform), typeof(Image));
-            go.transform.SetParent(parent, false);
-            var rt = (RectTransform)go.transform;
-            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1, 1);
-            rt.anchoredPosition = pos;
-            rt.sizeDelta = new Vector2(110, 110);
-            var img = go.GetComponent<Image>();
+            var img = UIKit.MakeImage(parent, "Ikon_" + label, Color.white);
             img.preserveAspect = true;
-            var t = new GameObject("Etiket", typeof(RectTransform), typeof(Text));
-            t.transform.SetParent(go.transform, false);
-            var trt = (RectTransform)t.transform;
-            trt.anchorMin = new Vector2(0, 0); trt.anchorMax = new Vector2(1, 0);
-            trt.pivot = new Vector2(.5f, 1);
-            trt.anchoredPosition = Vector2.zero;
-            trt.sizeDelta = new Vector2(0, 34);
-            var tx = t.GetComponent<Text>();
-            tx.font = movesText.font; tx.fontSize = 24; tx.fontStyle = FontStyle.Bold;
-            tx.alignment = TextAnchor.UpperCenter; tx.color = Color.white;
+            img.rectTransform.sizeDelta = new Vector2(IconSize, IconSize);
+            var tx = UIKit.MakeText(img.transform, "Etiket", UIKit.HudLight, 24, TextAnchor.UpperCenter);
             tx.horizontalOverflow = HorizontalWrapMode.Overflow;
+            var trt = tx.rectTransform;   // ikonun hemen altinda, ikonla ortali
+            trt.anchorMin = new Vector2(0, 0); trt.anchorMax = new Vector2(1, 0); trt.pivot = new Vector2(.5f, 1);
+            trt.anchoredPosition = new Vector2(0, -2); trt.sizeDelta = new Vector2(0, IconLabel);
             tx.text = label;
             return img;
         }
