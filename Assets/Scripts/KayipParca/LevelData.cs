@@ -152,6 +152,10 @@ namespace KayipParca
             if (d.hasDragon) d.dragonRect = new RectInt(dxMin, dyMin, dxMax - dxMin + 1, dyMax - dyMin + 1);
             foreach (var l in d.lasers) d.Ray(l.emitter + Shape.Dirs[l.dir], l.dir, l.cells);
             foreach (var f in d.fires) d.Ray(f.spawn, f.dir, f.cells);
+            // metinler secili dile (Loc): Turkce kaynak, Ingilizce karsiligi varsa o
+            d.name = Loc.T(d.name); d.story = Loc.T(d.story); d.hint = Loc.T(d.hint); d.outro = Loc.T(d.outro);
+            d.endT = Loc.T(d.endT); d.endB = Loc.T(d.endB); d.endAlone = Loc.T(d.endAlone); d.endDark = Loc.T(d.endDark);
+            d.yamaliLine = Loc.T(d.yamaliLine); d.heroLine = Loc.T(d.heroLine); d.flee = Loc.T(d.flee);
             return d;
         }
 
@@ -208,7 +212,7 @@ namespace KayipParca
             {
                 var l = raw.Trim();
                 if (l.Length == 0 || l.StartsWith("#")) continue;
-                if (l.StartsWith("BOLUM=")) { if (list.Count > 0) ci++; chapter = l.Substring(6).Trim(); continue; }
+                if (l.StartsWith("BOLUM=")) { if (list.Count > 0) ci++; chapter = Loc.T(l.Substring(6).Trim()); continue; }
                 list.Add(new Entry { chapter = chapter, file = l, chapterIndex = ci });
             }
             return list;

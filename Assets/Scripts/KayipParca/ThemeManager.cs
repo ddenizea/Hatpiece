@@ -112,7 +112,7 @@ namespace KayipParca
                 float k = Mathf.SmoothStep(0, 1, t / fadeInTime);
                 intensityScale = k;
                 if (cam) cam.backgroundColor = Color.Lerp(prevCam, CameraColor(th), k);
-                if (musicSource) musicSource.volume = th.musicVolume * k;
+                if (musicSource) { musicSource.mute = !Settings.Music; musicSource.volume = th.musicVolume * k; }
                 if (ambienceSource) ambienceSource.volume = th.ambienceVolume * k;
                 yield return null;
             }
@@ -128,6 +128,9 @@ namespace KayipParca
             src.loop = true;
             if (clip) src.Play(); else src.Stop();
         }
+
+        /// Menudeki muzik ayari (acik / kapali) hemen uygulanir.
+        public void ApplyMusicSetting() { if (musicSource) musicSource.mute = !Settings.Music; }
 
         public void FollowPlayer(Vector3 p)
         {

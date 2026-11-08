@@ -1546,6 +1546,15 @@ MonoBehaviour:
   sfxLaser: {fileID: 0}
   sfxFire: {fileID: 0}
   sfxGrab: {fileID: 0}
+  sfxGlow: {fileID: 0}
+  sfxLostFound: {fileID: 0}
+  sfxLostScared: {fileID: 0}
+  sfxLostSaved: {fileID: 0}
+  sfxEnemyStep: {fileID: 0}
+  sfxPaw: {fileID: 0}
+  sfxLaserOn: {fileID: 0}
+  sfxRoar: {fileID: 0}
+  sfxSnore: {fileID: 0}
   startLevel: 1
   cameraDrift: 0.12
   cheats: 1
@@ -1619,7 +1628,7 @@ MonoBehaviour:
     ambienceVolume: 0.4
   - name: Gece Koridoru
     globalColor: {r: 0.35, g: 0.45, b: 0.8, a: 1}
-    globalIntensity: 0.18
+    globalIntensity: 0.002
     playerLightColor: {r: 1, g: 0.9, b: 0.6, a: 1}
     playerLightIntensity: 1.3
     playerLightRadius: 4.5

@@ -178,6 +178,7 @@ namespace KayipParca
 
         void Update()
         {
+            if (inMenu) return;   // baslangic menusu tuslari kendi okur
             if (cheats && entries != null && HandleCheats()) return;
             int a = ReadAction();
             if (a < 0) return;
@@ -191,7 +192,7 @@ namespace KayipParca
 
         // ------------------------------------------------------------------ konusmalar (Dialogue.cs)
         Dialogue dialogue;
-        const float RiderSpace = 4.6f;   // 1-7. seviyelerde tahtanin saginda ejderhali Yamali'ya ayrilan genislik
+        const float RiderBand = 2.6f;    // 1-7. seviyelerde tahtanin ustunde ejderhali Yamali'ya ayrilan bant (dunya birimi)
         bool HasRider => data != null && !data.hasDragon && (!string.IsNullOrEmpty(data.yamaliLine) || !string.IsNullOrEmpty(data.flee));
         Transform YamaliAnchor => data != null && data.hasDragon ? (yamaliSr ? yamaliSr.transform : null) : (dialogue ? dialogue.RiderYamali : null);
 
@@ -227,7 +228,8 @@ namespace KayipParca
             busy = true;
             rescued.Clear(); SaveRescued();   // yeni oyun
             PlayerPrefs.DeleteKey(YamaliGame.YamaKey);   // Bolum 2'nin yama ordusu da sifirlanir
-            yield return ShowScreen("Story/title", entries[0].chapter, "[Enter] Başla");
+            yield return MainMenu();
+            yield return ShowScreen("Story/title", entries[0].chapter, Loc.T("[Enter] Başla"));
             var ta = Resources.Load<TextAsset>("KayipParca/Story/intro");
             if (ta != null)
             {
@@ -235,7 +237,7 @@ namespace KayipParca
                 {
                     int bar = raw.IndexOf('|');
                     if (bar < 0) continue;
-                    yield return ShowScreen("Story/" + raw.Substring(0, bar).Trim(), raw.Substring(bar + 1).Trim(), "[Enter] devam    [Esc] geç");
+                    yield return ShowScreen("Story/" + raw.Substring(0, bar).Trim(), Loc.T(raw.Substring(bar + 1).Trim()), Loc.T("[Enter] devam    [Esc] geç"));
                     if (screenSkip) break;
                 }
             }
@@ -243,10 +245,71 @@ namespace KayipParca
             yield return LoadLevel(0);
         }
 
+        // ------------------------------------------------------------------ baslangic menusu
+        /// Siyah ekran: HATPIECE, sapkali parca, dort satir (Basla / Ses / Muzik / Dil). W/S secer, Enter (ya da A/D) uygular.
+        /// Dil degisince sahne yeniden yuklenir; menu yeni dilde tekrar gelir.
+        bool inMenu;
+        IEnumerator MainMenu()
+        {
+            var canvas = (messageText ? messageText.canvas : FindAnyObjectByType<Canvas>()).transform;
+            var root = UIKit.MakeImage(canvas, "AnaMenu", Color.black);
+            root.raycastTarget = true; UIKit.Stretch(root.rectTransform, 0, 0, 1, 1); root.transform.SetAsLastSibling();
+            var icon = UIKit.MakeImage(root.transform, "Ikon", Color.white);
+            icon.sprite = SpriteBank.Get("Player/body_1010"); icon.preserveAspect = true;
+            UIKit.Pin(icon.rectTransform, new Vector2(.5f, 1), new Vector2(0, -70), new Vector2(170, 170));
+            foreach (var (n, sp) in new[] { ("Yuz", "Player/face_happy"), ("Sapka", "Player/hat") })
+            {
+                var layer = UIKit.MakeImage(icon.transform, n, Color.white);
+                layer.sprite = SpriteBank.Get(sp); layer.preserveAspect = true; UIKit.Stretch(layer.rectTransform, 0, 0, 1, 1);
+            }
+            var logo = UIKit.MakeText(root.transform, "Logo", UIKit.Hud, 118, TextAnchor.MiddleCenter);
+            UIKit.Stretch(logo.rectTransform, .1f, .6f, .9f, .78f); logo.text = "HATPIECE";
+            var sub = UIKit.MakeText(root.transform, "AltBaslik", UIKit.HudLight, 28, TextAnchor.MiddleCenter);
+            UIKit.Stretch(sub.rectTransform, .1f, .55f, .9f, .61f); sub.color = UIKit.Mute;
+            sub.text = entries != null && entries.Count > 0 ? Upper(entries[0].chapter).Replace(":", " ·") : "";
+            var rows = new Text[4]; var marks = new Image[4];
+            for (int i = 0; i < 4; i++)
+            {
+                rows[i] = UIKit.MakeText(root.transform, "Satir" + i, UIKit.Hud, 46, TextAnchor.MiddleLeft);
+                UIKit.Pin(rows[i].rectTransform, new Vector2(.5f, .5f), new Vector2(-150, 10 - i * 78), new Vector2(560, 64));
+                rows[i].rectTransform.pivot = new Vector2(0, .5f);
+                marks[i] = UIKit.MakeImage(root.transform, "Isaret" + i, Color.white); marks[i].sprite = UIKit.CircleSprite;
+                UIKit.Pin(marks[i].rectTransform, new Vector2(.5f, .5f), new Vector2(-186, 10 - i * 78), new Vector2(26, 26));
+            }
+            var keys = UIKit.MakeText(root.transform, "Tuslar", UIKit.BodyLight, 26, TextAnchor.MiddleCenter);
+            UIKit.BottomBand(keys.rectTransform, 80, 80, 24, 46); UIKit.AddKeyHints(keys);
+            keys.text = Loc.T("[W][S] seç    [Enter] onayla");
+            int sel = 0;
+            string Label(int i) => i == 0 ? Loc.T("Başla")
+                : i == 1 ? Loc.T("Ses") + ": " + Loc.T(Settings.Sfx ? "Açık" : "Kapalı")
+                : i == 2 ? Loc.T("Müzik") + ": " + Loc.T(Settings.Music ? "Açık" : "Kapalı")
+                : Loc.T("Dil") + ": " + (Loc.English ? "English" : "Türkçe");
+            void Refresh() { for (int i = 0; i < 4; i++) { rows[i].text = Label(i); rows[i].color = i == sel ? Color.white : UIKit.Mute; marks[i].enabled = i == sel; } }
+            inMenu = true; Refresh();
+            yield return null;
+            while (true)
+            {
+                int a = ReadAction();
+                if (a == 0) { sel = (sel + 3) % 4; Refresh(); Play(sfxMove); }
+                else if (a == 2) { sel = (sel + 1) % 4; Refresh(); Play(sfxMove); }
+                else if (a == 8 || a == 1 || a == 3)
+                {
+                    if (sel == 0 && a == 8) break;
+                    if (sel == 1) Settings.Sfx = !Settings.Sfx;
+                    else if (sel == 2) { Settings.Music = !Settings.Music; if (themes) themes.ApplyMusicSetting(); }
+                    else if (sel == 3) { Loc.Lang = Loc.English ? "tr" : "en"; inMenu = false; SceneManager.LoadScene(SceneManager.GetActiveScene().name); yield break; }
+                    Refresh(); Play(sfxBump);
+                }
+                yield return null;
+            }
+            Play(sfxFit);
+            inMenu = false; Destroy(root.gameObject);
+        }
+
         IEnumerator ChapterStart(int i)
         {
             busy = true;
-            yield return ShowScreen("Story/title", entries[i].chapter, "[Enter] Başla");
+            yield return ShowScreen("Story/title", entries[i].chapter, Loc.T("[Enter] Başla"));
             HideScreen();
             yield return LoadLevel(i);
         }
@@ -335,7 +398,7 @@ namespace KayipParca
             if (total <= 0) return;
             var label = UIKit.MakeText(row, "Etiket", UIKit.HudLight, 22, TextAnchor.MiddleRight);
             label.color = UIKit.Mute; label.horizontalOverflow = HorizontalWrapMode.Overflow;
-            label.text = "Kurtarılan";
+            label.text = Loc.T("Kurtarılan");
             label.rectTransform.sizeDelta = new Vector2(label.preferredWidth + 10, 28);
             for (int i = 0; i < total; i++) UIKit.MakeDot(row, i < count);
         }
@@ -583,18 +646,25 @@ namespace KayipParca
             float bottom = Mathf.Clamp01(BottomReserve * k / Mathf.Max(1, Screen.height));
             float free = Mathf.Max(.4f, 1f - top - bottom);              // ekran yuksekliginin tahtaya kalan payi
             float marginX = data.theme == 5 ? 2.2f : 1.4f, marginY = data.theme == 5 ? 1.2f : .45f;
-            float rider = HasRider ? RiderSpace : 0f;
-            cam.orthographicSize = Mathf.Max((data.height / 2f + marginY) / free, (data.width / 2f + marginX + rider / 2f) / cam.aspect);
-            // serbest bolgenin ortasi ekran ortasindan (top - bottom) / 2 kadar asagida: kamerayi o kadar yukari al
-            camCenter = levelCenter + new Vector3(rider / 2f, (top - bottom) * cam.orthographicSize, 0);
-            if (dialogue)
-            {
-                if (HasRider) dialogue.ShowRider(new Vector3(data.width + marginX * .4f + rider / 2f, levelCenter.y + .8f, 0), rider * .82f);
-                else dialogue.HideRider();
-            }
+            // ejderhali Yamali tahtanin USTUNDE, ortada durur: tahtanin ustune bir bant ayrilir, tahta yatayda ortali kalir
+            float riderBand = HasRider ? RiderBand : 0f;
+            cam.orthographicSize = Mathf.Max((data.height / 2f + marginY + riderBand / 2f) / free, (data.width / 2f + marginX) / cam.aspect);
+            // serbest bolgenin ortasi ekran ortasindan (top - bottom) / 2 kadar asagida: kamerayi o kadar yukari al;
+            // tahta + ejderha bandinin ortasi tahta ortasindan riderBand / 2 yukarida
+            camCenter = levelCenter + new Vector3(0, (top - bottom) * cam.orthographicSize + riderBand / 2f, 0);
             if (snap) cam.transform.position = new Vector3(camCenter.x, camCenter.y, -10);
 
             float viewH = cam.orthographicSize * 2f, viewW = viewH * cam.aspect;
+            if (dialogue)
+            {
+                if (HasRider)
+                {
+                    float boardTop = levelCenter.y + data.height / 2f;          // ust duvar satirinin ust kenari
+                    float rh = riderBand - .5f, rw = rh / .667f;
+                    dialogue.ShowRider(new Vector3(levelCenter.x, boardTop + marginY * .5f + rh / 2f, 0), rw);
+                }
+                else dialogue.HideRider();
+            }
             foreach (var (sr, file, factor) in new[] { (bgFar, "bg_far", .9f), (bgNear, "bg_near", .75f) })
             {
                 if (!sr) continue;
@@ -759,12 +829,12 @@ namespace KayipParca
             s = n;
             ApplyVisuals(snap: false);
             TurnSounds(before, s, picked, scared, grabbed);
-            if (s.crane && !history.Peek().crane) Flash("Vinç sende. Kanat kalkınca Yamalı'yı eyerden kap.");
-            if (burned) { Play(sfxFire); Flash("Halat yandı. Kanca başa döndü."); }
-            if (grabbed) { Play(sfxGrab); Flash("Onu çöpe götür."); if (dialogue) dialogue.Say(true, YamaliAnchor, "Bırak beni! O eyer benim!", 2.6f, .8f); }
-            if (picked) Flash("Gri parça peşine takıldı. Onu da eve götür.");
-            if (scared) Flash("Gri parça korktu, yerine kaçtı.");
-            if (dropped) { Flash("Eyer boş. Şimdi otur!"); if (dialogue) dialogue.Say(true, YamaliAnchor, "Bunu unutmayacağım, şapkalı!", 3f, .8f); }
+            if (s.crane && !history.Peek().crane) Flash(Loc.T("Vinç sende. Kanat kalkınca Yamalı'yı eyerden kap."));
+            if (burned) { Play(sfxFire); Flash(Loc.T("Halat yandı. Kanca başa döndü.")); }
+            if (grabbed) { Play(sfxGrab); Flash(Loc.T("Onu çöpe götür.")); if (dialogue) dialogue.Say(true, YamaliAnchor, Loc.T("Bırak beni! O eyer benim!"), 2.6f, .8f); }
+            if (picked) Flash(Loc.T("Gri parça peşine takıldı. Onu da eve götür."));
+            if (scared) Flash(Loc.T("Gri parça korktu, yerine kaçtı."));
+            if (dropped) { Flash(Loc.T("Eyer boş. Şimdi otur!")); if (dialogue) dialogue.Say(true, YamaliAnchor, Loc.T("Bunu unutmayacağım, şapkalı!"), 3f, .8f); }
 
             if (death != Death.None) { StartCoroutine(Die(death)); return; }
 
@@ -848,12 +918,12 @@ namespace KayipParca
             }
             if (movesText)
             {
-                movesText.text = $"{s.moves} <size=28>hamle</size>";
+                movesText.text = $"{s.moves} <size=28>{Loc.T("hamle")}</size>";
                 UpdateRescuedRow(LostTotal(), RescuedCount());
             }
             if (hudNow) hudNow.sprite = SpriteBank.Get($"Player/body_{s.ps}");
             if (hintText) hintText.text = string.IsNullOrEmpty(data.hint) ? "" : data.hint;
-            if (controlsText) controlsText.text = s.crane ? CraneControls : Controls;
+            if (controlsText) controlsText.text = Loc.T(s.crane ? CraneControls : Controls);
         }
 
         void UpdateFire(bool snap)
@@ -939,9 +1009,9 @@ namespace KayipParca
             switch (why)
             {
                 case Death.Laser: msg = "Lazer! Tekrar dene."; Play(sfxLaser ? sfxLaser : sfxDeath); break;
-                case Death.Fire: msg = "Kenarların kavruldu. Tekrar dene."; Play(sfxFire ? sfxFire : sfxDeath); break;
-                case Death.Enemy: msg = "Yakalandın. Tekrar dene."; Play(sfxDeath); break;
-                case Death.Moves: msg = "Hamle kalmadı. R ile baştan."; Play(sfxDeath); break;
+                case Death.Fire: msg = Loc.T("Kenarların kavruldu. Tekrar dene."); Play(sfxFire ? sfxFire : sfxDeath); break;
+                case Death.Enemy: msg = Loc.T("Yakalandın. Tekrar dene."); Play(sfxDeath); break;
+                case Death.Moves: msg = Loc.T("Hamle kalmadı. R ile baştan."); Play(sfxDeath); break;
                 default: msg = "Ah! Tekrar dene."; Play(sfxDeath); break;
             }
             if (why == Death.Moves) { player.SetFace(2); if (clone) clone.SetFace(2); }
@@ -968,7 +1038,7 @@ namespace KayipParca
                 yield return new WaitForSeconds(1.1f);
                 yield return dialogue.Flee();
             }
-            ShowMessage("Tık!" + (saved ? "\n<size=34>Bir parça daha evine döndü.</size>" : "") + (string.IsNullOrEmpty(data.outro) ? "" : "\n<size=34>" + data.outro + "</size>"));
+            ShowMessage(Loc.T("Tık!") + (saved ? "\n<size=34>" + Loc.T("Bir parça daha evine döndü.") + "</size>" : "") + (string.IsNullOrEmpty(data.outro) ? "" : "\n<size=34>" + data.outro + "</size>"));
             yield return new WaitForSeconds(string.IsNullOrEmpty(data.outro) ? 0.6f : OutroHold);
 
             PickEnding(out string endText, out string endImg);
@@ -978,18 +1048,18 @@ namespace KayipParca
             {
                 ShowMessage("");
                 if (themes) yield return themes.FadeOut();
-                string text = hasEnding ? endText : entries[index].chapter + "|tamamlandı!";
+                string text = hasEnding ? endText : entries[index].chapter + "|" + Loc.T("tamamlandı!");
                 string img = hasEnding ? endImg : "Story/title";
-                yield return ShowScreen(img, text, "[Enter] devam");
+                yield return ShowScreen(img, text, Loc.T("[Enter] devam"));
                 if (index + 1 < entries.Count)
                 {
-                    yield return ShowScreen("Story/title", entries[index + 1].chapter, "[Enter] Başla");
+                    yield return ShowScreen("Story/title", entries[index + 1].chapter, Loc.T("[Enter] Başla"));
                     HideScreen();
                     yield return LoadLevel(index + 1);
                 }
                 else
                 {
-                    yield return ShowScreen("Story/title", "HATPIECE|Oynadığın için teşekkürler!", "[Enter] baştan başla");
+                    yield return ShowScreen("Story/title", Loc.T("HATPIECE|Oynadığın için teşekkürler!"), Loc.T("[Enter] baştan başla"));
                     HideScreen();
                     firstLoad = true;
                     yield return TitleAndIntro();
@@ -1010,7 +1080,7 @@ namespace KayipParca
             else if (total > 0 && r < need && !string.IsNullOrEmpty(data.endAlone)) { text = data.endAlone; img = "Story/ending_alone"; }
             else if (!string.IsNullOrEmpty(data.endT)) { text = data.endT; img = "Story/ending_t"; }   // vinc Yamali'yi hep cope birakir
             else if (s.ending == 'B' && !string.IsNullOrEmpty(data.endB)) { text = data.endB; img = "Story/ending_b"; }
-            if (text != null && total > 0) text += $"||Kurtarılan parçalar: {r}/{total}";
+            if (text != null && total > 0) text += "||" + Loc.F("Kurtarılan parçalar: {0}/{1}", r, total);
         }
 
         int LostTotal() => entries != null && lostLevels.TryGetValue(entries[index].chapterIndex, out var l) ? l.Count : 0;
@@ -1040,7 +1110,7 @@ namespace KayipParca
             {
                 hudGoal.sprite = SpriteBank.Get($"Player/frame_{data.goals[g1]}");   // hedef: ici bos blob cerceve
                 hudGoal.color = Color.white;
-                hudGoal.GetComponentInChildren<Text>().text = g1 == 'Y' ? "Eyer" : "Hedef";
+                hudGoal.GetComponentInChildren<Text>().text = Loc.T(g1 == 'Y' ? "Eyer" : "Hedef");
             }
             bool two = g1 == 'G' && data.goals.ContainsKey('E');
             hudGoal2.gameObject.SetActive(two);
@@ -1069,7 +1139,7 @@ namespace KayipParca
             var trt = tx.rectTransform;   // ikonun hemen altinda, ikonla ortali
             trt.anchorMin = new Vector2(0, 0); trt.anchorMax = new Vector2(1, 0); trt.pivot = new Vector2(.5f, 1);
             trt.anchoredPosition = new Vector2(0, -2); trt.sizeDelta = new Vector2(0, IconLabel);
-            tx.text = label;
+            tx.text = Loc.T(label);
             return img;
         }
 
@@ -1199,7 +1269,7 @@ namespace KayipParca
         }
 
         void ShowMessage(string m) { if (messageText) messageText.text = m; }
-        void Play(AudioClip c) { if (sfx && c) sfx.PlayOneShot(c); }
+        void Play(AudioClip c) { if (sfx && c && Settings.Sfx) sfx.PlayOneShot(c); }
 
         /// -1 yok, 0-3 yon (N E S W), 4 saat yonu, 5 ters, 6 geri al, 7 yeniden, 8 bosluk/enter, 10 esc (N artik ReadCheat'te)
         static int ReadAction()

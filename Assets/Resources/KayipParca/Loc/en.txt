@@ -1,0 +1,140 @@
+# Turkce kaynak<TAB>English. Loc.T(tr) bu tabloyla cevirir; satirlar | ile ayni bicimde kalir.
+Bölüm 1: Ejderhanın Binicisi	Chapter 1: The Dragon's Rider
+Bölüm 2: Yamalı'nın İntikamı	Chapter 2: Patchy's Revenge
+Bölüm 1	Chapter 1
+[W][A][S][D] hareket    [Q][E] döndür    [Boşluk] bekle    [Z] geri al    [R] yeniden	[W][A][S][D] move    [Q][E] rotate    [Space] wait    [Z] undo    [R] restart
+[W][A][S][D] kancayı sür    [Boşluk] tut / bırak    [Z] geri al    [R] yeniden	[W][A][S][D] move hook    [Space] grab / drop    [Z] undo    [R] restart
+[A][D] yürü    [Boşluk] zıpla    [S] platformdan in    [R] yeniden	[A][D] walk    [Space] jump    [S] drop down    [R] restart
+Kurtarılan	Rescued
+Sen	You
+Hedef	Target
+Hedef 2	Target 2
+Eyer	Saddle
+hamle	moves
+Yama ordusu	Patch army
+[Enter] Başla	[Enter] Start
+[Enter] devam    [Esc] geç	[Enter] continue    [Esc] skip
+[Enter] devam	[Enter] continue
+[Enter] baştan başla	[Enter] play again
+[Enter] başlık ekranı	[Enter] title screen
+[Boşluk] başla	[Space] start
+tamamlandı!	complete!
+HATPIECE|Oynadığın için teşekkürler!	HATPIECE|Thanks for playing!
+Kurtarılan parçalar: {0}/{1}	Rescued pieces: {0}/{1}
+Tık!	Click!
+Bir parça daha evine döndü.	One more piece made it home.
+Vinç sende. Kanat kalkınca Yamalı'yı eyerden kap.	The crane is yours. When the wing lifts, grab Patchy off the saddle.
+Halat yandı. Kanca başa döndü.	The rope burned. The hook went back to the start.
+Onu çöpe götür.	Take him to the bin.
+Bırak beni! O eyer benim!	Let me go! That saddle is mine!
+Gri parça peşine takıldı. Onu da eve götür.	The grey piece is following you. Take it home too.
+Gri parça korktu, yerine kaçtı.	The grey piece got scared and ran back.
+Eyer boş. Şimdi otur!	The saddle is empty. Sit down!
+Bunu unutmayacağım, şapkalı!	I won't forget this, hat boy!
+Kenarların kavruldu. Tekrar dene.	Your edges got scorched. Try again.
+Yakalandın. Tekrar dene.	You got caught. Try again.
+Hamle kalmadı. R ile baştan.	Out of moves. Press R to restart.
+Başla	Start
+Ses	Sound
+Müzik	Music
+Dil	Language
+Açık	On
+Kapalı	Off
+Türkçe	Turkish
+English	English
+[W][S] seç    [Enter] onayla	[W][S] select    [Enter] confirm
+Kutunun Dibi	Bottom of the Box
+Orada kal, şapkalı. Dipte rahat edersin.	Stay down there, hat boy. The bottom suits you.
+Şapka yerinde. Gerisi kolay.	Hat's still on. The rest is easy.
+Q / E ile dön. Şeklin uyunca yuva parlar.	Rotate with Q / E. The slot glows when your shape fits.
+Kutunun kenarına tırmandım. Aşağıda kocaman bir halı var.	I climbed to the edge of the box. There's a huge carpet below.
+Halıda görüşürüz! Tabii oraya kadar gelebilirsen.	See you on the carpet! If you can even get that far.
+Halı Ormanı	Carpet Forest
+Bu halının altını kimse süpürmez. Toz canavarları seni çok sevecek.	Nobody sweeps under this carpet. The dust monsters will love you.
+Hapşu. … Tamam, dikkatli yürüyeceğim.	Achoo. … Fine, I'll walk carefully.
+İstasyona hangi yönden girersen o kenar değişir. Her istasyon bir kez çalışır.	The side you enter a station from is the side that changes. Each station works once.
+Hapşu! Bu tozlar beni de tuttu. Mutfağa kaçıyorum!	Achoo! The dust got me too. I'm off to the kitchen!
+Mutfak Fayansları	Kitchen Tiles
+Fayanslar ayna gibi parlıyor. Bakalım yansımanla anlaşabilecek misin?	The tiles shine like a mirror. Let's see if you can get along with your reflection.
+Sağa diyorum, sola gidiyor. Tam benim gibi inatçı.	I say right, it goes left. Stubborn, just like me.
+Yansıman tersine yürür. İkiniz de kendi yuvanıza oturmalısınız.	Your reflection walks the opposite way. Both of you must reach your own slot.
+Yansımanla iyi anlaştın. Ben yalnız çalışırım. Hoşça kal!	You and your reflection get along fine. I work alone. Bye!
+Oyuncak Kalesi	Toy Castle
+Askerlerimle tanış. Hepsi yanlış yere zorla sokulmuş parçalar. Artık bana çalışıyorlar.	Meet my soldiers. Pieces that were forced into the wrong places. They work for me now.
+Yanlış parça yoktur. Yanlış yer vardır.	There are no wrong pieces. Only wrong places.
+Çirkin parçalar her hamlende bir kare yürür. Noktalar yollarını gösterir.	Ugly pieces move one square every move you make. The dots show their paths.
+Rafta bozuk bir oyuncak vinç buldum. Kumandası hâlâ çalışıyor. İşe yarayabilir.	I found a broken toy crane on the shelf. The remote still works. Could be useful.
+Askerlerim de yetmedi mi? Masada bekliyorum!	Not even my soldiers were enough? I'll be waiting on the desk!
+Çalışma Masası	The Desk
+Kedinin lazer oyuncağını buldum. Bakalım ne kadar hızlısın.	I found the cat's laser toy. Let's see how fast you are.
+Kırmızı ışık… Değmesem yeter.	Red light… Just don't touch it.
+Lazer yanarken üstünde durma. Boşluk bir tur bekletir.	Don't stand on a laser while it's on. Space waits one turn.
+Lazer de yetmedi. Işıkları kapatayım bari!	Even the laser wasn't enough. Let me turn off the lights then!
+Gece Koridoru	Night Corridor
+Lambanın fişini çektim. Karanlıktan korkmuyorsun, değil mi?	I pulled the lamp's plug. You're not afraid of the dark, are you?
+Şapkamın altı zaten hep karanlık.	It's always dark under my hat anyway.
+Karanlıkta sadece çevreni görürsün. Adımını sayarak at.	In the dark you only see what's near you. Count your steps.
+Karanlıkta da yolunu buldun ha? Kediyle tanış o zaman.	Found your way in the dark too? Then go meet the cat.
+Kedinin Yatağı	The Cat's Bed
+O lazer kediyi uyandırmış. Benim suçum değil. … Tamam, biraz benim suçum.	That laser woke the cat. Not my fault. … Okay, a little my fault.
+Patiler yavaş iner. Ben daha hızlı düşünürüm.	Paws come down slowly. I think faster.
+Patiler her hamlende bir kare iner. Yollarını izle.	Paws drop one square every move you make. Watch their paths.
+Yatak bitti. Önümde masa, masanın üstünde resim.	The bed is behind me. Ahead is the desk, and on the desk, the picture.
+Resme dönüyorum. Orada ejderha benim tarafımda!	I'm going back to the picture. The dragon is on my side there!
+Resmin İçi	Inside the Picture
+Sıkıysa yakala, şapkalı!	Catch me if you can, hat boy!
+Vinç kumandası bende, Yamalı. Ejderha uyumak istiyor.	I've got the crane remote, Patchy. The dragon wants to sleep.
+Ejderha ateşten sonra iki tur kanadını kaldırır. O an kancayı eyere indir. Kafasındaki sayı, sıradaki ateşe kalan tur.	After breathing fire the dragon lifts its wing for two turns. Lower the hook onto the saddle then. The number over its head counts down to the next fire.
+Yapbozun içindesin. Eyerde Yamalı var ve ejderha seni gördü!	You're inside the puzzle. Patchy is in the saddle and the dragon has seen you!
+SON: EYER SAHİBİNİ BULDU|Yamalı'yı çöpe bıraktın. Kapaktan son bir ses geldi: "Bunu unutmayacağım!" Eyere oturdun, ejderha derin bir uykuya daldı. Yol boyunca kurtardığın parçalar birer birer yerlerine yerleşti.	ENDING: THE SADDLE FOUND ITS OWNER|You dropped Patchy in the bin. One last voice came from under the lid: "I won't forget this!" You sat in the saddle and the dragon fell into a deep sleep. The pieces you rescued along the way settled into their places one by one.
+GERÇEK SON: KİMSE EKSİK KALMASIN|Yamalı da kayıp bir parçaydı. Onu kendi kutusuna, Korsan Gemisi yapbozuna götürdün. Kurtardığın bütün parçalar evine döndü... Korsan kutusu hafifçe sallanıyor.	TRUE ENDING: NO ONE LEFT MISSING|Patchy was a lost piece too. You took him to his own box, the Pirate Ship puzzle. Every piece you rescued went home... The pirate box is rocking gently.
+SON: YALNIZ BİNİCİ|Eyere oturdun, ejderha uyudu. Ama kutunun dibinde hâlâ yolunu bulamamış parçalar var. Resim tamam, ama biraz soğuk. Çöpten bir kıkırdama geliyor.	ENDING: THE LONELY RIDER|You sat in the saddle and the dragon slept. But there are still pieces at the bottom of the box that never found their way. The picture is complete, but a little cold. A giggle comes from the bin.
+GİZLİ SON: YENİ YAMALI|Eyeri geri aldın ama yol boyunca kimseye el uzatmadın. Kenarların yontuldu, gözlerin kızardı. Çöpte Yamalı gülümsedi: "Hoş geldin, kardeşim."	SECRET ENDING: THE NEW PATCHY|You took the saddle back, but you never reached out to anyone on the way. Your edges got worn down, your eyes turned red. In the bin, Patchy smiled: "Welcome, brother."
+Gece. Masada neredeyse bitmiş bir yapboz: uyuyan bir ejderha ve sırtında şapkalı küçük bir binici.	Night. On the desk, an almost finished puzzle: a sleeping dragon with a small rider in a hat on its back.
+Kenardan yamalı, yamuk bir parça tırmandı. "Bu eyer artık benim." Bir itme, ve binici masadan düştü.	A patched, crooked piece climbed up over the edge. "This saddle is mine now." One shove, and the rider fell off the desk.
+Kutunun dibi. Karanlık. Şapka hâlâ yerinde. "Tamam. Geri dönüyorum."	The bottom of the box. Dark. The hat is still on. "Okay. I'm going back."
+Çöp Kutusundan Kaçış	Escape from the Bin
+Yamalı: "Önce bu kutudan çıkmam lazım. Zeki planlar hep basit başlar."	Patchy: "First I need to get out of this bin. Clever plans always start simple."
+A / D ile yürü, Boşluk ile zıpla. Basılı tutarsan daha yükseğe zıplarsın.	Walk with A / D, jump with Space. Hold it to jump higher.
+"Mutfak. Masa çok yukarıda. Olsun, acılmıyorum."	"The kitchen. The desk is way up there. Fine, I'm in no hurry."
+Silgi Devriyesi	Eraser Patrol
+Yamalı: "Silgiler devriyede. Yamaları siliyorlar. Ben silinmem, ben ezerim."	Patchy: "Erasers on patrol. They erase patches. I don't get erased, I squash."
+Silgilerin üstüne zıpla, yandan değme. Bayraklar kaldığın yeri kaydeder.	Jump on the erasers, don't touch their sides. Flags save your progress.
+"Ordum büyüyor. Arkamdan biri 'Blup' dedi. Bunu evet olarak alıyorum."	"My army is growing. Someone behind me said 'Blup'. I'll take that as a yes."
+Asansörlü Karanlık	Dark with Lifts
+Yamalı: "Fişi ben çekmiştim. Şimdi ben de görmüyorum. Harika."	Patchy: "I pulled the plug myself. Now I can't see either. Great."
+Asansörün üstüne çık, seni taşır. Tavandaki dikenlere dikkat.	Get on the lift, it carries you. Mind the spikes on the ceiling.
+Kayan Yastıklar	Sliding Cushions
+Yamalı: "Kedi uyuyor. Sessiz ol. Sessiz ol diyorum! Blup demeyin!"	Patchy: "The cat is asleep. Be quiet. I said be quiet! No blupping!"
+Kayan yastıklar seni taşır. Yay seni çok yükseğe fırlatır.	Sliding cushions carry you. The spring launches you very high.
+"Kedi uyanmadı. Kimse bana teşekkür etmedi ama olsun."	"The cat didn't wake up. Nobody thanked me, but fine."
+Kale Burçları	Castle Towers
+Yamalı: "Burada şapkalı askerlerimi dağıtmıştı. Bu sefer kale benim."	Patchy: "This is where hat boy scattered my soldiers. This time the castle is mine."
+İnce platformlardan alttan geçebilirsin. S ile aşağı inersin.	You can pass through thin platforms from below. Press S to drop down.
+"Kalenin bayrağına bir yama diktim. Yakıştı."	"I sewed a patch onto the castle flag. It suits it."
+Boş Kutu	Empty Box
+Yamalı: "Yapbozun kutusu. Beni buraya hiç koymadılar. Hangi kutudan geldiğimi bile bilmiyorum."	Patchy: "The puzzle box. They never put me in here. I don't even know which box I came from."
+Önce bayrağa dokun, sonra riskli yola gir.	Touch the flag first, then take the risky path.
+"Kutunun kapağı açık. İçeri bakmadım. Bakmayacağım."	"The box lid is open. I didn't look inside. I won't."
+Masanın Bacağı	The Table Leg
+Yamalı: "Masa. Tepesinde resim. Resmin içinde şapkalı. Tırmanıyorum."	Patchy: "The desk. The picture on top. Hat boy inside the picture. I'm climbing."
+Hep yukarı. Düşersen son bayraktan başlarsın.	Always up. If you fall, you restart from the last flag.
+"Masanın üstündeyim. Ordum arkamda. Çoğu."	"I'm on the desk. My army is behind me. Most of it."
+Son Hücum	The Last Charge
+Yamalı: "Ejderha uyuyor. Şapkalı eyerde. Ve ben buradayım."	Patchy: "The dragon is asleep. Hat boy is in the saddle. And I am here."
+Son engeller. Sonunda iki ordu karşılaşacak.	The last obstacles. At the end, two armies will meet.
+Islak. Karanlık. Muz kabuğu kokuyor.|Yamalı gözlerini açtı: çöp kutusunun dibindeydi.	Wet. Dark. Smells like banana peel.|Patchy opened his eyes: he was at the bottom of the bin.
+"Bir dakika önce ejderhanın sırtındaydım.|Şimdi bir peynir kabuğunun yanındayım."	"A minute ago I was on the dragon's back.|Now I'm next to a cheese rind."
+"O şapkalı her şeyi aldı. Eyeri, resmi, alkışları."|Yamalı ayağa kalktı. "İntikam vakti."	"That hat boy took everything. The saddle, the picture, the applause."|Patchy stood up. "Time for revenge."
+"Bu evde benim gibi yerini bulamamış bir sürü parça var.|Hepsini toplayacağım. Bir ordu kuracağım."	"This house is full of pieces like me that never found their place.|I'll gather them all. I'll build an army."
+Seviye tamam!	Level complete!
+Blup! Bir yama orduya katıldı.	Blup! A patch joined the army.
+Yamalı ordusuyla resmin önüne vardı. Şapkalı da kurtardığı parçalarla onu bekliyordu.|Yamalı: "Eyerimi geri almaya geldim."|Şapkalı: "Eyer kimsenin değil. Ejderhanın uykusu için."	Patchy arrived at the picture with his army. Hat boy was waiting with the pieces he had rescued.|Patchy: "I've come for my saddle."|Hat boy: "The saddle belongs to no one. It's for the dragon's sleep."
+Yama ordusu daha kalabalıktı. Şapkalı'nın parçaları dağıldı, Yamalı eyere geri oturdu.|Ejderha bir gözünü açtı. Artık yamalı bir ejderha.	The patch army was bigger. Hat boy's pieces scattered and Patchy sat back in the saddle.|The dragon opened one eye. A patched dragon now.
+Şapkalı'nın arkasında daha çok parça vardı. Yama ordusu dağıldı.|Yamalı bu kez kimse itmeden masadan indi: "Belki başka bir resim beni bekliyordur."|Ejderha uyudu.	Hat boy had more pieces behind him. The patch army scattered.|This time Patchy climbed down from the desk without anyone pushing: "Maybe another picture is waiting for me."|The dragon slept.
+İki ordu eşitti. Çarpıştılar ve Şapkalı ile Yamalı birlikte masadan düştü. Eyer boş kaldı.|Aşağıdan iki ses: "Senin yüzünden." "Hayır, senin."	The two armies were equal. They clashed, and Hat boy and Patchy fell off the desk together. The saddle stayed empty.|Two voices from below: "Your fault." "No, yours."
+Şapkalı'nın kurtardığı parçalar: {0}    ·    Yama ordusu: {1}	Pieces Hat boy rescued: {0}    ·    Patch army: {1}
+Yamalı: "Eyerimi geri almaya geldim."	Patchy: "I've come for my saddle."
+Şapkalı: "Eyer kimsenin değil. Ejderhanın uykusu için."	Hat boy: "The saddle belongs to no one. It's for the dragon's sleep."
+Yamalı: 	Patchy: 
+Şapkalı: 	Hat boy: 

@@ -2,6 +2,7 @@ NAME=Boş Kutu
 THEME=0
 STORY=Yamalı: "Yapbozun kutusu. Beni buraya hiç koymadılar. Hangi kutudan geldiğimi bile bilmiyorum."
 HINT=Önce bayrağa dokun, sonra riskli yola gir.
+DARK=0
 OUTRO="Kutunun kapağı açık. İçeri bakmadım. Bakmayacağım."
 MAP
 ..............................................................................................................

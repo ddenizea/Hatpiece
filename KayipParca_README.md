@@ -12,6 +12,12 @@ Tur bazlı, ızgara üzerinde oynanan bir bulmaca. Önce PC için, klavyeyle.
 
 Bir ışık sahneyi etkilemiyorsa ışığın **Target Sorting Layers** ayarını "All" yapın.
 
+## Başlangıç menüsü ve dil
+
+Oyun siyah bir menüyle açılır: **Başla**, **Ses** (efektler), **Müzik**, **Dil** (Türkçe / English). W/S seçer, Enter ya da A/D uygular; ayarlar `PlayerPrefs`'e yazılır (`Settings.cs`). Dil değişince sahne yeniden yüklenir.
+
+Çeviri `Loc.cs` ile: Türkçe kaynak metinler oyunda olduğu gibi durur, İngilizce karşılıkları `Resources/KayipParca/Loc/en.txt` dosyasında satır başına `Türkçe<TAB>English` biçimindedir. Seviye dosyalarının NAME/STORY/HINT/OUTRO/END_*/YAMALI/SAPKALI/FLEE satırları, bölüm adları, giriş ve Bölüm 2 metinleri, HUD etiketleri ve tuş ipuçları bu tablodan geçer; tabloda olmayan metin Türkçe kalır. Yeni bir metin eklerken `en.txt`'ye de bir satır ekleyin.
+
 ## Kontroller
 
 | Tuş | İş |
@@ -83,6 +89,9 @@ Ayrı sahne: `Assets/Scenes/Yamali.unity`, kod `Scripts/KayipParca/Yamali/Yamali
 - **A / D:** yürü. **Boşluk:** zıpla (basılı tut, daha yükseğe). **S:** tek yönlü platformdan in. **R:** yeniden.
 - Görseller blob stilinde ve 2x (`Tools/art_blob.py`, `Art/Yamali`, `Story/y_*`): Yamalı ters renkli blob + beyaz tombul bacaklar, silgi bekçisi, yuvarlak uçlu dikenler, tek yönlü platform, asansör, yay, bayrak, çıkış kapısı. Duvarlar Bölüm 1 temalarının doodle karolarıdır.
 - HUD Bölüm 1 ile aynı dil: sol üstte bölüm + seviye adı, sağ üstte "Yama ordusu" halkaları (toplanan yama = siyah gövdeli beyaz gözlü top), altta ipucu ve tuş kapakları, seviye girişinde siyah perde.
+- Seviye dosyası anahtarları: `SPEED=4.2` asansör / kayan platform hızı (varsayılan 2.4), `DARK=<ortam ışığı>` karanlık seviye: değer global ışık şiddeti (`DARK=0` zifiri, `DARK=0.12` loş); Yamalı, çıkış ve bayraklar kendi ışığında. Rayı iki yanında olan platform ortadan başlayıp önce sola/aşağı gider; rayı yalnız altında olan asansör tepeden başlar.
+- Toplanan yamalar yalnızca o seviyede peşine takılır (sayaç bölüm boyunca birikir); asansördeyken Yamalı'nın yanında dururlar.
+- Final: iki ordunun savaş animasyonu (`YamaliGame.WarAnimation`), ardından sonuç ekranı.
 - `Tools/art_yamali.py` eski doodle üreticidir, artık kullanılmıyor (üzerine yazmamak için çalıştırmayın).
 
 ## Eski Bölüm 2: Yama Korsanları (gerçek zamanlı, oyundan çıkarıldı)

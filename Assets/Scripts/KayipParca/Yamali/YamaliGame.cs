@@ -25,7 +25,25 @@ namespace KayipParca
     {
         [Header("Sesler (bos kalabilir)")]
         public AudioClip music;
-        public AudioClip sfxJump, sfxPickup, sfxDie, sfxWin, sfxStomp, sfxSpring;
+        public AudioClip sfxJump, sfxPickup, sfxDie, sfxWin, sfxStomp, sfxSpring, sfxFlag, sfxStep, sfxLand;
+        // Inspector'da bos birakilanlar Resources/KayipParca/Audio'dan yuklenir (Bolum 1 ile ayni sesler)
+        static AudioClip Clip(AudioClip c, string name) => c ? c : Resources.Load<AudioClip>("KayipParca/Audio/" + name);
+        void LoadDefaultSounds()
+        {
+            sfxJump = Clip(sfxJump, "hareket"); sfxPickup = Clip(sfxPickup, "kayip_bulundu"); sfxDie = Clip(sfxDie, "olum");
+            sfxWin = Clip(sfxWin, "seviye_bitti"); sfxStomp = Clip(sfxStomp, "carpma"); sfxSpring = Clip(sfxSpring, "istasyon");
+            sfxFlag = Clip(sfxFlag, "kayip_kurtarildi"); sfxStep = Clip(sfxStep, "cirkin_adim"); sfxLand = Clip(sfxLand, "carpma");
+        }
+        // tema -> muzik (Bolum 1'in ThemeManager eslemesiyle ayni)
+        static readonly string[] ThemeMusic = { "muzik_muzik_kutusu", "muzik_kalimba", "muzik_ksilofon", "muzik_ksilofon", "muzik_muzik_kutusu", "muzik_kalimba", "muzik_muzik_kutusu", "muzik_muzik_kutusu" };
+        void SetMusic(int theme)
+        {
+            if (!musicSrc) return;
+            var clip = music ? music : Resources.Load<AudioClip>("KayipParca/Audio/" + ThemeMusic[Mathf.Clamp(theme, 0, ThemeMusic.Length - 1)]);
+            if (!clip || musicSrc.clip == clip) return;
+            musicSrc.clip = clip; musicSrc.volume = .35f; musicSrc.Play();
+        }
+        float stepT;
 
         [Header("Ayarlar")]
         [Tooltip("0 = giris hikayesinden basla, 1-8 = dogrudan o seviyeden (test icin)")]
@@ -48,6 +66,9 @@ namespace KayipParca
         class Level
         {
             public string name = "", story = "", hint = "", outro = "";
+            public float moverSpeed = 2.4f;   // SPEED= (asansor / kayan platform hizi)
+            public bool dark;                 // DARK=<ortam isigi>: karanlik seviye; oyuncu, cikis ve bayraklar kendi isiginda
+            public float ambient = .12f;      // karanlikta global isik siddeti (DARK=0 tam karanlik)
             public int theme, W, H;
             public char[,] g;   // [x, y], y = 0 en alt satir
         }
@@ -65,7 +86,28 @@ namespace KayipParca
 
         // ------------------------------------------------------------------ durum
         Camera cam;
+        Light2D globalLight;
         Level L;
+
+        /// Kodla kurulan 2D isik butun siralama katmanlarini etkilesin (Target Sorting Layers = All).
+        static void AllSortingLayers(Light2D l)
+        {
+            var f = typeof(Light2D).GetField("m_ApplyToSortingLayers", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            if (f == null) return;
+            var layers = SortingLayer.layers; var ids = new int[layers.Length];
+            for (int i = 0; i < layers.Length; i++) ids[i] = layers[i].id;
+            f.SetValue(l, ids);
+        }
+
+        Light2D PointLight(string n, Transform parent, Vector3 pos, float radius, float intensity)
+        {
+            var l = new GameObject(n).AddComponent<Light2D>();
+            l.transform.SetParent(parent, false); l.transform.position = pos;
+            l.lightType = Light2D.LightType.Point; l.intensity = intensity; l.color = Color.white;
+            l.pointLightOuterRadius = radius; l.pointLightInnerRadius = radius * .25f;
+            AllSortingLayers(l);
+            return l;
+        }
         int levelIndex;          // 1..8
         int levelCount;
         Transform world;
@@ -109,6 +151,7 @@ namespace KayipParca
             int test = UnityEditor.SessionState.GetInt("YamaliTestStartAt", -1);   // Kayip Parca > 9/10 test menuleri
             if (test >= 0) { startAt = test; UnityEditor.SessionState.EraseInt("YamaliTestStartAt"); }
 #endif
+            LoadDefaultSounds();
             LoadText();
             LoadSave();
             while (Resources.Load<TextAsset>($"KayipParca/Yamali/yamali{levelCount + 1}") != null) levelCount++;
@@ -116,6 +159,7 @@ namespace KayipParca
             SetupUI();
             audioSrc = gameObject.AddComponent<AudioSource>();
             musicSrc = gameObject.AddComponent<AudioSource>(); musicSrc.loop = true; musicSrc.volume = .5f;
+            audioSrc.mute = !Settings.Sfx; musicSrc.mute = !Settings.Music;   // baslangic menusu ayarlari
             if (music) { musicSrc.clip = music; musicSrc.Play(); }
             StartCoroutine(Flow());
         }
@@ -130,11 +174,12 @@ namespace KayipParca
                 int eq = raw.IndexOf('=');
                 if (eq <= 0) continue;
                 string k = raw.Substring(0, eq).Trim(), v = raw.Substring(eq + 1).Trim();
-                if (k == "INTRO") introLines.Add(v); else text[k] = v;
+                if (k == "INTRO") { int bar = v.IndexOf('|'); introLines.Add(bar < 0 ? v : v.Substring(0, bar + 1) + Loc.T(v.Substring(bar + 1))); }
+                else text[k] = Loc.T(v);
             }
         }
 
-        string T(string key, string fallback) => text.TryGetValue(key, out var v) ? v : fallback;
+        string T(string key, string fallback) => text.TryGetValue(key, out var v) ? v : Loc.T(fallback);
 
         void LoadSave()
         {
@@ -161,10 +206,12 @@ namespace KayipParca
             }
             cam.orthographic = true; cam.orthographicSize = 7.5f;
             cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = Color.black;
-            if (FindAnyObjectByType<Light2D>() == null)
+            globalLight = FindAnyObjectByType<Light2D>();
+            if (globalLight == null)
             {
-                var l = new GameObject("Global Light 2D").AddComponent<Light2D>();
-                l.lightType = Light2D.LightType.Global; l.intensity = 1f;
+                globalLight = new GameObject("Global Light 2D").AddComponent<Light2D>();
+                globalLight.lightType = Light2D.LightType.Global; globalLight.intensity = 1f;
+                AllSortingLayers(globalLight);
             }
         }
 
@@ -178,7 +225,7 @@ namespace KayipParca
                 {
                     int bar = line.IndexOf('|');
                     if (bar < 0) continue;
-                    yield return ShowScreen("Story/" + line.Substring(0, bar).Trim(), line.Substring(bar + 1).Trim(), "[Enter] devam    [Esc] geç");
+                    yield return ShowScreen("Story/" + line.Substring(0, bar).Trim(), line.Substring(bar + 1).Trim(), Loc.T("[Enter] devam    [Esc] geç"));
                     if (screenSkip) break;
                 }
                 HideScreen();
@@ -194,7 +241,7 @@ namespace KayipParca
             BuildLevel(i);
             // seviye girisi: ad + kisa hikaye
             playing = false;
-            ShowOverlay($"{i}. {L.name}", L.story, "[Boşluk] başla");
+            ShowOverlay($"{i}. {L.name}", L.story, Loc.T("[Boşluk] başla"));
             waitOverlay = true;
             yield return null;
             while (waitOverlay) yield return null;
@@ -205,6 +252,7 @@ namespace KayipParca
         IEnumerator LevelComplete()
         {
             levelDone = true; playing = false;
+            vel = Vector2.zero; grounded = true; squash = 0;   // fizik durur: bekleme karesine don
             Play(sfxWin);
             string m = T("CLEAR", "Seviye tamam!");
             if (!string.IsNullOrEmpty(L.outro)) m += "\n<size=34>" + L.outro.Replace("|", "\n") + "</size>";
@@ -217,16 +265,112 @@ namespace KayipParca
         IEnumerator Finale()
         {
             int hero = RescuedCount(), army = yama.Count;
-            string score = $"Şapkalı'nın kurtardığı parçalar: {hero}    ·    Yama ordusu: {army}";
-            yield return ShowScreen("Story/y_war", T("WAR", "Yamalı ordusuyla resmin önüne vardı. Şapkalı da kurtardığı parçalarla bekliyordu.") + "||" + score, "[Enter] devam");
+            string score = Loc.F("Şapkalı'nın kurtardığı parçalar: {0}    ·    Yama ordusu: {1}", hero, army);
+            yield return WarAnimation(hero, army);
+            yield return ShowScreen("Story/y_war", T("WAR", "Yamalı ordusuyla resmin önüne vardı. Şapkalı da kurtardığı parçalarla bekliyordu.") + "||" + score, Loc.T("[Enter] devam"));
             string img, body;
             if (army > hero) { img = "Story/y_end_yama"; body = T("END_YAMA", "Yama ordusu daha kalabalıktı. Yamalı ejderhanın eyerine yeniden oturdu."); }
             else if (hero > army) { img = "Story/y_end_hero"; body = T("END_HERO", "Şapkalı'nın arkasında daha çok parça vardı. Yamalı'nın ordusu dağıldı."); }
             else { img = "Story/y_end_both"; body = T("END_BOTH", "İki ordu eşitti. Çarpıştılar ve ikisi birlikte masadan düştü."); }
-            yield return ShowScreen(img, body + "||" + score, "[Enter] devam");
-            yield return ShowScreen("Story/title", T("THANKS", "HATPIECE|Oynadığın için teşekkürler!"), "[Enter] başlık ekranı");
+            yield return ShowScreen(img, body + "||" + score, Loc.T("[Enter] devam"));
+            yield return ShowScreen("Story/title", T("THANKS", "HATPIECE|Oynadığın için teşekkürler!"), Loc.T("[Enter] başlık ekranı"));
             LevelManager.pendingStart = -1;
             SceneManager.LoadScene("KayipParca");
+        }
+
+        // ------------------------------------------------------------------ final: iki ordunun savasi (animasyon)
+        /// Seviye gizlenir, siyah zeminde Sapkali + kurtardigi parcalar solda, Yamali + yama ordusu sagda.
+        /// Konusur, yururler, ortada carpisirlar; kalabalik olmayan taraf sacilir, esitse ikisi de masadan duser.
+        IEnumerator WarAnimation(int hero, int army)
+        {
+            playing = false; HideOverlay(); StopCoroutineSafe();
+            if (world) world.gameObject.SetActive(false);
+            var root = new GameObject("Savas").transform;
+            var c = (Vector2)cam.transform.position;
+            float ground = c.y - 3.2f;
+            SpriteRenderer Sp(string path, Vector3 p, int order, float scale = 1f, Transform parent = null)
+            {
+                var go = new GameObject(path); go.transform.SetParent(parent ? parent : root, false);
+                go.transform.position = p; go.transform.localScale = Vector3.one * scale;
+                var sr = go.AddComponent<SpriteRenderer>(); sr.sprite = SpriteBank.Get(path); sr.sortingOrder = order;
+                return sr;
+            }
+            // zemin: masa kenari
+            var table = new GameObject("Masa").AddComponent<SpriteRenderer>(); table.transform.SetParent(root, false);
+            table.sprite = UIKit.RoundedSprite; table.drawMode = SpriteDrawMode.Sliced; table.size = new Vector2(30, .7f);
+            table.transform.position = new Vector3(c.x, ground - .55f, 0); table.sortingOrder = 40; table.color = Color.white;
+            // Sapkali (govde + yuz + sapka) ve parcalari
+            var heroT = new GameObject("Sapkali").transform; heroT.SetParent(root, false); heroT.position = new Vector3(c.x - 8f, ground + .5f, 0);
+            Sp("Player/body_1010", heroT.position, 52, 1f, heroT); Sp("Player/face_idle_0", heroT.position, 53, 1f, heroT); Sp("Player/hat", heroT.position, 54, 1f, heroT);
+            heroT.localScale = Vector3.one * 1.6f;
+            var heroSide = new List<Transform>();
+            for (int i = 0; i < hero; i++) heroSide.Add(Sp("Common/lost_happy", new Vector3(c.x - 10.2f - i * .95f, ground + .35f, 0), 51, .9f).transform);
+            // Yamali ve ordusu
+            var yamT = Sp("Common/yamali", new Vector3(c.x + 8f, ground + .5f, 0), 52, 1.6f).transform;
+            var armySide = new List<Transform>();
+            for (int i = 0; i < army; i++) { var a = Sp("Enemies/ugly_" + (i % 4), new Vector3(c.x + 10.2f + i * .95f, ground + .35f, 0), 51, .9f); armySide.Add(a.transform); }
+            var cam0 = cam.transform.position;
+
+            // 1) konusma
+            Flash(Loc.T("Yamalı: \"Eyerimi geri almaya geldim.\""), 1.8f); yield return new WaitForSeconds(1.9f);
+            Flash(Loc.T("Şapkalı: \"Eyer kimsenin değil. Ejderhanın uykusu için.\""), 1.9f); yield return new WaitForSeconds(2.1f);
+            // 2) hucum: iki taraf ortaya yurur
+            float dur = 1.6f;
+            var heroStart = heroT.position; var yamStart = yamT.position;
+            var hs0 = new List<Vector3>(); foreach (var tr in heroSide) hs0.Add(tr.position);
+            var as0 = new List<Vector3>(); foreach (var tr in armySide) as0.Add(tr.position);
+            for (float t = 0; t < dur; t += Time.deltaTime)
+            {
+                float k = t / dur, bob = Mathf.Abs(Mathf.Sin(t * 14f)) * .25f;
+                heroT.position = Vector3.Lerp(heroStart, new Vector3(c.x - 1.3f, ground + .5f, 0), k) + Vector3.up * bob;
+                yamT.position = Vector3.Lerp(yamStart, new Vector3(c.x + 1.3f, ground + .5f, 0), k) + Vector3.up * bob;
+                for (int i = 0; i < heroSide.Count; i++) heroSide[i].position = Vector3.Lerp(hs0[i], new Vector3(c.x - 2.6f - i * .95f, ground + .35f, 0), k) + Vector3.up * Mathf.Abs(Mathf.Sin(t * 14f + i)) * .25f;
+                for (int i = 0; i < armySide.Count; i++) armySide[i].position = Vector3.Lerp(as0[i], new Vector3(c.x + 2.6f + i * .95f, ground + .35f, 0), k) + Vector3.up * Mathf.Abs(Mathf.Sin(t * 14f + i)) * .25f;
+                yield return null;
+            }
+            // 3) carpisma: beyaz toz bulutlari + sarsinti
+            Play(sfxStomp);
+            var puffs = new List<SpriteRenderer>();
+            for (int i = 0; i < 7; i++)
+            {
+                var pf = new GameObject("Toz").AddComponent<SpriteRenderer>(); pf.transform.SetParent(root, false);
+                pf.sprite = UIKit.CircleSprite; pf.sortingOrder = 60; pf.color = Color.white;
+                pf.transform.position = new Vector3(c.x + Random.Range(-1.6f, 1.6f), ground + .4f + Random.Range(0f, 1.8f), 0);
+                pf.transform.localScale = Vector3.zero; puffs.Add(pf);
+            }
+            for (float t = 0; t < .7f; t += Time.deltaTime)
+            {
+                float k = t / .7f;
+                foreach (var pf in puffs) { pf.transform.localScale = Vector3.one * Mathf.Lerp(.2f, 2.2f, k); pf.color = new Color(1, 1, 1, 1 - k); }
+                cam.transform.position = cam0 + new Vector3(Random.Range(-.12f, .12f), Random.Range(-.12f, .12f), 0) * (1 - k);
+                yield return null;
+            }
+            cam.transform.position = cam0;
+            foreach (var pf in puffs) Destroy(pf.gameObject);
+            // 4) sonuc: kaybeden taraf sacilir, esitse iki lider masadan duser, kazananlar ziplar
+            var losers = new List<Transform>(); var winners = new List<Transform>();
+            if (army > hero) { losers.AddRange(heroSide); losers.Add(heroT); winners.AddRange(armySide); winners.Add(yamT); }
+            else if (hero > army) { losers.AddRange(armySide); losers.Add(yamT); winners.AddRange(heroSide); winners.Add(heroT); }
+            else { losers.Add(heroT); losers.Add(yamT); }
+            var vel = new List<Vector3>(); var start = new List<Vector3>();
+            foreach (var l in losers)
+            {
+                float dir = l.position.x < c.x ? -1f : 1f;
+                vel.Add(new Vector3(dir * Random.Range(4f, 9f), hero == army ? -2f : Random.Range(5f, 9f), 0)); start.Add(l.position);
+            }
+            for (float t = 0; t < 1.6f; t += Time.deltaTime)
+            {
+                for (int i = 0; i < losers.Count; i++)
+                {
+                    var l = losers[i];
+                    l.position = start[i] + vel[i] * t + Vector3.down * (hero == army ? 9f : 14f) * t * t * .5f;
+                    l.rotation = Quaternion.Euler(0, 0, (vel[i].x < 0 ? 1 : -1) * 420f * t);
+                }
+                foreach (var w in winners) w.position = new Vector3(w.position.x, ground + .45f + Mathf.Abs(Mathf.Sin(t * 10f + w.position.x)) * .45f, 0);
+                yield return null;
+            }
+            yield return new WaitForSeconds(.4f);
+            Destroy(root.gameObject);
         }
 
         void StopCoroutineSafe() { if (flashing != null) { StopCoroutine(flashing); flashing = null; if (msgText) msgText.text = ""; } }
@@ -247,11 +391,17 @@ namespace KayipParca
                 string k = raw.Substring(0, eq), v = raw.Substring(eq + 1);
                 switch (k)
                 {
-                    case "NAME": lv.name = v; break;
+                    case "NAME": lv.name = Loc.T(v); break;
                     case "THEME": int.TryParse(v, out lv.theme); break;
-                    case "STORY": lv.story = v; break;
-                    case "HINT": lv.hint = v; break;
-                    case "OUTRO": lv.outro = v; break;
+                    case "STORY": lv.story = Loc.T(v); break;
+                    case "HINT": lv.hint = Loc.T(v); break;
+                    case "OUTRO": lv.outro = Loc.T(v); break;
+                    case "SPEED": float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out lv.moverSpeed); break;
+                    case "DARK":
+                        lv.dark = true;
+                        if (float.TryParse(v.Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var amb))
+                            lv.ambient = amb >= 1f ? .12f : amb;   // DARK=1 eski yazim: varsayilan losluk
+                        break;
                 }
             }
             lv.H = rows.Count; lv.W = 0;
@@ -332,13 +482,17 @@ namespace KayipParca
             // oyuncu
             playerSr = MakeSprite("Yamali", "Yamali/yamali_idle_0", spawn, 5);
             playerTr = playerSr.transform;
-            pos = spawn; vel = Vector2.zero; dead = false; levelDone = false; riding = null; grounded = false; facing = 1; squash = 0;
-            for (int k = 0; k < yama.Count; k++)
+            // karanlik seviye: ortam isigi kisik, oyuncu / cikis / bayraklar kendi isiginda
+            if (globalLight) globalLight.intensity = L.dark ? L.ambient : 1f;
+            if (L.dark)
             {
-                var a = MakeSprite("YamaAskeri", "Enemies/ugly_" + (k % 4), spawn, 4);
-                a.transform.localScale = Vector3.one * .62f; army.Add(a);
+                PointLight("OyuncuIsigi", playerTr, playerTr.position, 5.5f, 1.3f);
+                PointLight("CikisIsigi", world, new Vector3(exitPos.x, exitPos.y, 0), 3f, .9f);
+                foreach (var f in flags) PointLight("BayrakIsigi", world, new Vector3(f.pos.x, f.pos.y, 0), 2f, .6f);
             }
+            pos = spawn; vel = Vector2.zero; dead = false; levelDone = false; riding = null; grounded = false; facing = 1; squash = 0;
             if (levelText) levelText.text = $"{levelIndex}. {L.name}";
+            SetMusic(L.theme);
             if (hintText) hintText.text = string.IsNullOrEmpty(L.hint) ? T("HINT", "A / D: yürü    Boşluk: zıpla    S: platformdan in    R: yeniden") : L.hint;
             UpdateArmyHud();
             SnapCamera();
@@ -369,7 +523,8 @@ namespace KayipParca
                     m.a = vertical ? start - new Vector2(0, lo) : start - new Vector2(lo, 0);
                     m.b = vertical ? start + new Vector2(0, hi) : start + new Vector2(hi, 0);
                     m.len = Vector2.Distance(m.a, m.b);
-                    m.p = vertical ? lo : lo; m.pos = start;
+                    m.p = lo; m.pos = start;
+                    if (lo > 0 && hi > 0) m.dir = -1;   // ortada baslayan platform once sola / asagi (oyuncuya dogru) gider
                     m.tr = new GameObject(vertical ? "Asansor" : "KayanPlatform").transform; m.tr.SetParent(world, false);
                     m.tr.position = start;
                     for (int k = 0; k < w; k++)
@@ -580,6 +735,7 @@ namespace KayipParca
                 }
             if (landY > float.NegativeInfinity && bottom <= landY)
             {
+                if (!grounded && vel.y < -6f) Play(sfxLand, .35f);   // yuksekten inis
                 ny = landY + HH; vel.y = 0; grounded = true; riding = onM;
             }
             else riding = null;
@@ -593,7 +749,7 @@ namespace KayipParca
             if (m.wait > 0) m.wait -= dt;
             else
             {
-                m.p += m.dir * 2.4f * dt;
+                m.p += m.dir * L.moverSpeed * dt;
                 if (m.p >= m.len) { m.p = m.len; m.dir = -1; m.wait = .45f; }
                 if (m.p <= 0) { m.p = 0; m.dir = 1; m.wait = .45f; }
             }
@@ -666,7 +822,7 @@ namespace KayipParca
             foreach (var f in flags)
                 if (!f.on && Mathf.Abs(pos.x - f.pos.x) < .7f && Mathf.Abs(pos.y - f.pos.y) < 1f)
                 {
-                    f.on = true; f.sr.sprite = SpriteBank.Get("Yamali/flag_up");
+                    f.on = true; f.sr.sprite = SpriteBank.Get("Yamali/flag_up"); Play(sfxFlag);
                     spawn = new Vector2(f.pos.x, f.pos.y - .5f + HH + .001f);
                 }
         }
@@ -704,8 +860,12 @@ namespace KayipParca
                 playerTr.localScale = new Vector3(1 + squash * .6f, 1 - squash * .6f, 1);
                 string frame;
                 if (!grounded) frame = vel.y > 0 ? "yamali_jump" : "yamali_fall";
-                else if (Mathf.Abs(vel.x) > .5f) frame = "yamali_run_" + ((int)(animT * 12) % 4);
-                else frame = "yamali_idle_" + ((int)(animT * 2.5f) % 2);
+                else if (Mathf.Abs(vel.x) > .5f)
+                {
+                    frame = "yamali_run_" + ((int)(animT * 12) % 4);
+                    stepT += dt; if (stepT > .3f) { stepT = 0; Play(sfxStep, .25f); }   // adim sesi
+                }
+                else { frame = "yamali_idle_" + ((int)(animT * 2.5f) % 2); stepT = .2f; }
                 playerSr.sprite = SpriteBank.Get("Yamali/" + frame);
                 playerSr.flipX = facing < 0;
             }
@@ -715,12 +875,26 @@ namespace KayipParca
             if (trailT > .04f) { trailT = 0; trail.Insert(0, pos); if (trail.Count > 200) trail.RemoveAt(trail.Count - 1); }
             for (int k = 0; k < army.Count; k++)
             {
-                int idx = Mathf.Min(trail.Count - 1, 7 + k * 6);
-                if (idx < 0) break;
-                var tp = trail[idx];
-                army[k].transform.position = new Vector3(tp.x, tp.y - .12f + Mathf.Abs(Mathf.Sin(animT * 8 + k)) * .08f, 0);
+                Vector3 target; bool flip;
+                if (riding != null && Mathf.Abs(vel.x) < .5f)
+                {
+                    // asansor / kayan platformda: oyuncunun yaninda, platformun ustunde dizilir
+                    float x = pos.x - facing * (k + 1) * .62f;
+                    x = Mathf.Clamp(x, riding.pos.x - riding.hw + .3f, riding.pos.x + riding.hw - .3f);
+                    target = new Vector3(x, pos.y - .12f, 0); flip = facing < 0;
+                    army[k].transform.position = Vector3.Lerp(army[k].transform.position, target, 1f - Mathf.Exp(-12f * dt));
+                }
+                else
+                {
+                    int idx = Mathf.Min(trail.Count - 1, 7 + k * 6);
+                    if (idx < 0) break;
+                    var tp = trail[idx];
+                    target = new Vector3(tp.x, tp.y - .12f + Mathf.Abs(Mathf.Sin(animT * 8 + k)) * .08f, 0);
+                    flip = (k + 1 < trail.Count && idx + 1 < trail.Count) && trail[idx].x < trail[idx + 1].x;
+                    army[k].transform.position = target;
+                }
                 army[k].sprite = SpriteBank.Get("Enemies/ugly_" + ((int)(animT * 6 + k) % 4));
-                army[k].flipX = (k + 1 < trail.Count && idx + 1 < trail.Count) && trail[idx].x < trail[idx + 1].x;
+                army[k].flipX = flip;
             }
 
             foreach (var p in pickups)
@@ -791,7 +965,7 @@ namespace KayipParca
             chapterText = UIKit.MakeText(root, "Bolum", UIKit.HudLight, 26, TextAnchor.LowerLeft);
             UIKit.TopBand(chapterText.rectTransform, UIKit.Margin, 700, 26, 34);
             chapterText.color = UIKit.Mute;
-            chapterText.text = LevelManager.Upper(ChapterName).Replace(":", " ·");
+            chapterText.text = LevelManager.Upper(Loc.T(ChapterName)).Replace(":", " ·");
             levelText = UIKit.MakeText(root, "Baslik", UIKit.Hud, 54, TextAnchor.UpperLeft);
             UIKit.TopBand(levelText.rectTransform, UIKit.Margin, 700, 60, 70);
             // sag ust: yama ordusu halkalari (UpdateArmyHud doldurur)
@@ -838,7 +1012,7 @@ namespace KayipParca
             for (int i = armyRow.childCount - 1; i >= 0; i--) Destroy(armyRow.GetChild(i).gameObject);
             var label = UIKit.MakeText(armyRow, "Etiket", UIKit.HudLight, 24, TextAnchor.MiddleRight);
             label.color = UIKit.Mute; label.horizontalOverflow = HorizontalWrapMode.Overflow;
-            label.text = "Yama ordusu";
+            label.text = Loc.T("Yama ordusu");
             label.rectTransform.sizeDelta = new Vector2(label.preferredWidth + 10, 32);
             for (int i = 0; i < 6; i++) UIKit.MakeDot(armyRow, i < yama.Count, 26, inverted: true);
         }
@@ -860,7 +1034,7 @@ namespace KayipParca
         void Flash(string m, float dur) { if (flashing != null) StopCoroutine(flashing); flashing = StartCoroutine(FlashRoutine(m.Replace("|", "\n"), dur)); }
         IEnumerator FlashRoutine(string m, float dur) { msgText.text = m; yield return new WaitForSeconds(dur); msgText.text = ""; flashing = null; }
 
-        void Play(AudioClip c) { if (c) audioSrc.PlayOneShot(c); }
+        void Play(AudioClip c, float vol = 1f) { if (c && audioSrc) audioSrc.PlayOneShot(c, vol); }
 
         IEnumerator ShowScreen(string image, string body, string prompt)
         {

@@ -2,6 +2,7 @@ NAME=Masanın Bacağı
 THEME=6
 STORY=Yamalı: "Masa. Tepesinde resim. Resmin içinde şapkalı. Tırmanıyorum."
 HINT=Hep yukarı. Düşersen son bayraktan başlarsın.
+SPEED=4.2
 OUTRO="Masanın üstündeyim. Ordum arkamda. Çoğu."
 MAP
 ..........................

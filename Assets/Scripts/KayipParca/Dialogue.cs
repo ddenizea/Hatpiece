@@ -15,6 +15,7 @@ namespace KayipParca
         {
             public RectTransform rt; public Text text; public Transform anchor; public Vector3 offset;
             public float until; public CanvasGroup group;
+            public RectTransform[] tail;   // kuyruk toplari (hale + top), konusana dogru kayar
         }
 
         Camera cam;
@@ -37,28 +38,42 @@ namespace KayipParca
 
         Bubble MakeBubble(string n)
         {
-            var go = new GameObject(n, typeof(RectTransform), typeof(Image), typeof(CanvasGroup));
+            // Blob stili balon: siyah hale + beyaz tombul govde (kose yaricapi buyuk) + iki yuvarlak kuyruk topu.
+            // Yazi tipi HUD ile ayni (Fredoka Bold).
+            var go = new GameObject(n, typeof(RectTransform), typeof(CanvasGroup));
             go.transform.SetParent(canvasRt, false);
             var rt = (RectTransform)go.transform;
             rt.anchorMin = rt.anchorMax = new Vector2(.5f, .5f); rt.pivot = new Vector2(.5f, 0);
-            var img = go.GetComponent<Image>(); img.color = Color.white;
-            var ol = go.AddComponent<Outline>(); ol.effectColor = Color.black; ol.effectDistance = new Vector2(4, -4);
-            // kuyruk: kucuk dondurulmus kare
-            var tail = new GameObject("Kuyruk", typeof(RectTransform), typeof(Image));
-            tail.transform.SetParent(rt, false);
-            var trt = (RectTransform)tail.transform;
-            trt.anchorMin = trt.anchorMax = new Vector2(.5f, 0); trt.sizeDelta = new Vector2(26, 26);
-            trt.anchoredPosition = new Vector2(0, 2); trt.localRotation = Quaternion.Euler(0, 0, 45);
-            tail.GetComponent<Image>().color = Color.white;
-            var tgo = new GameObject("Yazi", typeof(RectTransform), typeof(Text));
-            tgo.transform.SetParent(rt, false);
-            var t = tgo.GetComponent<Text>();
-            t.font = font; t.fontSize = 30; t.color = Color.black; t.alignment = TextAnchor.MiddleCenter;
-            t.horizontalOverflow = HorizontalWrapMode.Wrap; t.verticalOverflow = VerticalWrapMode.Overflow; t.supportRichText = true;
-            var tr = (RectTransform)tgo.transform;
-            tr.anchorMin = Vector2.zero; tr.anchorMax = Vector2.one; tr.offsetMin = new Vector2(22, 16); tr.offsetMax = new Vector2(-22, -16);
+            Image Panel(string pn, Color col, float grow, float corner)
+            {
+                var img = UIKit.MakePanel(rt, pn, col);
+                var r = img.rectTransform;
+                r.anchorMin = Vector2.zero; r.anchorMax = Vector2.one;
+                r.offsetMin = new Vector2(-grow, -grow); r.offsetMax = new Vector2(grow, grow);
+                UIKit.SetCorner(img, corner);
+                return img;
+            }
+            Panel("Hale", Color.black, 7, 48);
+            Panel("Govde", Color.white, 0, 42);
+            // kuyruk: balonun altindan konusana dogru inen, kuculen iki top (her biri siyah haleli).
+            // Konusanin yatay konumu balondan sapmissa (kenara yaslanma) toplar o yone kayar (Place).
+            var tails = new System.Collections.Generic.List<RectTransform>();
+            foreach (var (y, r) in new[] { (-8f, 15f), (-32f, 8f) })
+            {
+                var halo = UIKit.MakeImage(rt, "KuyrukHale", Color.black); halo.sprite = UIKit.CircleSprite;
+                UIKit.Pin(halo.rectTransform, new Vector2(.5f, 0), new Vector2(0, y), new Vector2(2 * r + 12, 2 * r + 12));
+                var ball = UIKit.MakeImage(rt, "Kuyruk", Color.white); ball.sprite = UIKit.CircleSprite;
+                UIKit.Pin(ball.rectTransform, new Vector2(.5f, 0), new Vector2(0, y), new Vector2(2 * r, 2 * r));
+                tails.Add(halo.rectTransform); tails.Add(ball.rectTransform);
+            }
+            // kuyruk toplari govdeyle birlessin: govdeyi kuyruklarin ustune cek
+            rt.Find("Govde").SetAsLastSibling();
+            var t = UIKit.MakeText(rt, "Yazi", UIKit.Hud, 28, TextAnchor.MiddleCenter);
+            t.color = Color.black;
+            var tr = t.rectTransform;
+            tr.anchorMin = Vector2.zero; tr.anchorMax = Vector2.one; tr.offsetMin = new Vector2(26, 16); tr.offsetMax = new Vector2(-26, -16);
             go.SetActive(false);
-            return new Bubble { rt = rt, text = t, group = go.GetComponent<CanvasGroup>() };
+            return new Bubble { rt = rt, text = t, group = go.GetComponent<CanvasGroup>(), tail = tails.ToArray() };
         }
 
         /// Bir konusmaci ustunde balon goster. who: "yamali" ya da "sapkali".
@@ -68,7 +83,7 @@ namespace KayipParca
             var b = yamali ? yamaliBubble : heroBubble;
             if (b == null) return;
             b.anchor = anchor; b.offset = new Vector3(0, yOffset, 0);
-            b.text.text = (yamali ? "<b>Yamalı:</b> " : "<b>Şapkalı:</b> ") + line;
+            b.text.text = Loc.T(yamali ? "Yamalı: " : "Şapkalı: ") + line;
             float w = Mathf.Min(620, Mathf.Max(260, b.text.preferredWidth * .6f + 60));
             b.rt.sizeDelta = new Vector2(w, 100);
             b.rt.gameObject.SetActive(true);
@@ -88,9 +103,27 @@ namespace KayipParca
             if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRt, sp, null, out var local)) return;
             var half = canvasRt.rect.size / 2f;
             float hw = b.rt.sizeDelta.x / 2f + 16;
-            local.x = Mathf.Clamp(local.x, -half.x + hw, half.x - hw);
-            local.y = Mathf.Clamp(local.y, -half.y + 20, half.y - b.rt.sizeDelta.y - 20);
+            var want = local;
+            bool riderFleeing = fleeing && b == yamaliBubble;
+            if (riderFleeing)
+            {
+                // kacan ejderhayla birlikte ekrandan cikar; tamamen disari cikinca kapanir
+                if (local.x > half.x + hw) { b.rt.gameObject.SetActive(false); return; }
+            }
+            else
+            {
+                local.x = Mathf.Clamp(local.x, -half.x + hw, half.x - hw);
+                local.y = Mathf.Clamp(local.y, -half.y + 20, half.y - b.rt.sizeDelta.y - 20);
+            }
             b.rt.anchoredPosition = local;
+            // kuyruk toplari konusana dogru: balon kenara yaslandiysa yatayda kayar (en fazla govdenin icinde)
+            float tx = Mathf.Clamp(want.x - local.x, -b.rt.sizeDelta.x / 2f + 30, b.rt.sizeDelta.x / 2f - 30);
+            if (b.tail != null)
+                for (int i = 0; i < b.tail.Length; i++)
+                {
+                    float k = i < 2 ? .5f : 1f;   // ilk top yarim, ikinci top tam kayma: konusana dogru egilir
+                    var p = b.tail[i].anchoredPosition; p.x = tx * k; b.tail[i].anchoredPosition = p;
+                }
         }
 
         void LateUpdate()
