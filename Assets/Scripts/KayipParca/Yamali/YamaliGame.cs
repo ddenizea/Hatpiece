@@ -94,7 +94,7 @@ namespace KayipParca
         float trailT;
 
         // arayuz
-        Text levelText, hintText, msgText, controlsText;
+        Text levelText, chapterText, hintText, msgText, controlsText;
         RectTransform armyRow; int armyShown = -1;
         GameObject overlay; Text overlayTitle, overlayBody, overlayPrompt;
         GameObject screenRoot; Image screenPic; Text screenText, screenPrompt;
@@ -338,7 +338,7 @@ namespace KayipParca
                 var a = MakeSprite("YamaAskeri", "Enemies/ugly_" + (k % 4), spawn, 4);
                 a.transform.localScale = Vector3.one * .62f; army.Add(a);
             }
-            if (levelText) levelText.text = LevelManager.TitleText(ChapterName, levelIndex, L.name);
+            if (levelText) levelText.text = $"{levelIndex}. {L.name}";
             if (hintText) hintText.text = string.IsNullOrEmpty(L.hint) ? T("HINT", "A / D: yürü    Boşluk: zıpla    S: platformdan in    R: yeniden") : L.hint;
             UpdateArmyHud();
             SnapCamera();
@@ -744,12 +744,18 @@ namespace KayipParca
         void SnapCamera() { camPos = CameraTarget(); ApplyCamera(); }
         Vector2 camPos;
 
+        // HUD bantlari (1080'lik tuvalde): altta ipucu + tus kapaklari paneli, ustte bolum + seviye adi paneli.
+        // Harita bu bantlarin ARASINA sigdirilir: zemin satiri alt panelin ustunde kalir.
+        const float BottomBand = 140f / 1080f, TopBand = 150f / 1080f;
+
         Vector2 CameraTarget()
         {
             var t = pos + new Vector2(facing * 1.5f, 1.2f);
             float hh = cam.orthographicSize, hw = hh * cam.aspect;
+            float rb = 2f * hh * BottomBand, rt = 2f * hh * TopBand;      // bantlarin dunya birimi yuksekligi
             t.x = L.W <= hw * 2 ? L.W * .5f : Mathf.Clamp(t.x, hw, L.W - hw);
-            t.y = L.H <= hh * 2 ? L.H * .5f : Mathf.Clamp(t.y, hh, L.H - hh);
+            float usable = 2f * hh - rb - rt;                               // bantlar arasindaki gorunur yukseklik
+            t.y = L.H <= usable ? L.H * .5f - (rb - rt) * .5f : Mathf.Clamp(t.y, hh - rb, L.H - hh + rt);
             return t;
         }
 
@@ -778,8 +784,16 @@ namespace KayipParca
         {
             var root = UIKit.MakeCanvas("UI").transform;
             // sol ust: bolum adi + seviye adi
-            levelText = UIKit.MakeText(root, "Baslik", UIKit.Hud, 54, TextAnchor.MiddleLeft);
-            UIKit.TopBand(levelText.rectTransform, UIKit.Margin, 700, 24, 96);
+            // yazilarin arkasina siyah paneller: beyaz duvar ustune dusseler de okunur
+            var topPanel = UIKit.MakePanel(root, "BaslikZemin", Color.black);
+            UIKit.Pin(topPanel.rectTransform, new Vector2(0, 1), new Vector2(UIKit.Margin - 24, -12), new Vector2(760, 132));
+            UIKit.SetCorner(topPanel, 28);
+            chapterText = UIKit.MakeText(root, "Bolum", UIKit.HudLight, 26, TextAnchor.LowerLeft);
+            UIKit.TopBand(chapterText.rectTransform, UIKit.Margin, 700, 26, 34);
+            chapterText.color = UIKit.Mute;
+            chapterText.text = LevelManager.Upper(ChapterName).Replace(":", " ·");
+            levelText = UIKit.MakeText(root, "Baslik", UIKit.Hud, 54, TextAnchor.UpperLeft);
+            UIKit.TopBand(levelText.rectTransform, UIKit.Margin, 700, 60, 70);
             // sag ust: yama ordusu halkalari (UpdateArmyHud doldurur)
             armyRow = UIKit.MakeRect(root, "OrduSatiri");
             UIKit.Pin(armyRow, new Vector2(1, 1), new Vector2(-UIKit.Margin, -44), new Vector2(640, 40));
@@ -792,6 +806,9 @@ namespace KayipParca
             UIKit.AddBubble(msgText);   // yaziya gore boyutlanir
             msgText.color = Color.black;
             // alt: seviye ipucu, altinda tus kapaklari
+            var bottomPanel = UIKit.MakePanel(root, "IpucuZemin", Color.black);
+            UIKit.Pin(bottomPanel.rectTransform, new Vector2(.5f, 0), new Vector2(0, 6), new Vector2(1500, 128));
+            UIKit.SetCorner(bottomPanel, 32);
             hintText = UIKit.MakeText(root, "Ipucu", UIKit.Body, 30, TextAnchor.LowerCenter);
             UIKit.BottomBand(hintText.rectTransform, 80, 80, 68, 54);
             controlsText = UIKit.MakeText(root, "Kontroller", UIKit.BodyLight, 26, TextAnchor.MiddleCenter);

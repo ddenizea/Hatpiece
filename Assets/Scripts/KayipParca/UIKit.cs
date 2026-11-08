@@ -17,6 +17,8 @@ namespace KayipParca
         public static readonly Color OutlineColor = new Color(0, 0, 0, .8f);
         /// Ikincil yazilar (etiketler, tus aciklamalari): siyah zemin ustunde gri.
         public static readonly Color Mute = new Color(.6f, .6f, .6f);
+        /// Beyaz zemin ustundeki yazi (koyu murekkep).
+        public static readonly Color Ink = new Color(.12f, .12f, .12f);
         public static readonly Color BackdropColor = new Color(0, 0, 0, .62f);
         /// Mesaj balonu rengi (ust / alt). Balon artik tahtanin altinda durdugu icin opak beyaz;
         /// alfa ya da ton degistirilerek dikey gecis verilebilir (UIGradient bu iki rengi harmanlar).

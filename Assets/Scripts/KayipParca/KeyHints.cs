@@ -19,7 +19,6 @@ namespace KayipParca
         Text source;
         RectTransform row;
         string last;
-
         void Awake() { source = GetComponent<Text>(); }
         void OnEnable() { last = null; }
 
