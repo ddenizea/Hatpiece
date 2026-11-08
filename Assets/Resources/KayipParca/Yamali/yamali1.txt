@@ -1,8 +1,8 @@
-NAME=Çöpten Çıkış
+NAME=Çöp Kutusundan Kaçış
 THEME=2
-STORY=Kabuk soyuntuları, ıslak peçeteler... Burası benim yerim değil.|Önce bu çöp kutusundan çıkmalıyım.
-HINT=Boşluk'a basılı tutarsan daha yükseğe zıplarsın. S ile tek yönlü platformdan aşağı inersin.
-OUTRO=Mutfak fayansları. Yukarıda bir yerde o masa var.
+STORY=Yamalı: "Önce bu kutudan çıkmam lazım. Zeki planlar hep basit başlar."
+HINT=A / D ile yürü, Boşluk ile zıpla. Basılı tutarsan daha yükseğe zıplarsın.
+OUTRO="Mutfak. Masa çok yukarıda. Olsun, acılmıyorum."
 MAP
 ................................................................
 ................................................................

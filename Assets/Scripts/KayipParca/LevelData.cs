@@ -49,6 +49,7 @@ namespace KayipParca
         }
 
         public string name, story = "", hint = "", outro = "", endT = "", endB = "", endAlone = "", endDark = "";
+        public string yamaliLine = "", heroLine = "", flee = "";   // konusma balonlari (Dialogue.cs)
         public int theme, moves;
         public string shape;
         public readonly Dictionary<char, string> goals = new Dictionary<char, string>();
@@ -96,6 +97,9 @@ namespace KayipParca
                     case "STORY": d.story = v; break;
                     case "HINT": d.hint = v; break;
                     case "OUTRO": d.outro = v; break;
+                    case "YAMALI": d.yamaliLine = v; break;
+                    case "SAPKALI": d.heroLine = v; break;
+                    case "FLEE": d.flee = v; break;
                     case "END_T": d.endT = v; break;
                     case "END_B": d.endB = v; break;
                     case "END_ALONE": d.endAlone = v; break;

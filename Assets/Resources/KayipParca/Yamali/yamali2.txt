@@ -1,8 +1,8 @@
-NAME=Halı Ormanı
+NAME=Silgi Devriyesi
 THEME=1
-STORY=Halının tüyleri bir orman gibi.|Silgiler devriye geziyor; üstlerine zıplarsam beni silemezler.
-HINT=Silgilere yandan değme, üstlerine zıpla.    Bayraklar kaldığın yeri kaydeder.
-OUTRO=Ormanı geçtim. Ordum büyüyor.
+STORY=Yamalı: "Silgiler devriyede. Yamaları siliyorlar. Ben silinmem, ben ezerim."
+HINT=Silgilerin üstüne zıpla, yandan değme. Bayraklar kaldığın yeri kaydeder.
+OUTRO="Ordum büyüyor. Arkamdan biri 'Blup' dedi. Bunu evet olarak alıyorum."
 MAP
 ........................................................................................#.............................................................
 ........................................................................................#.............................................................

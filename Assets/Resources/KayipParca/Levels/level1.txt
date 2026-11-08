@@ -3,8 +3,11 @@ THEME=0
 MOVES=29
 SHAPE=1000
 GOAL_G=0010
-HINT=Q / E ile dönüp yuvaya uy. Köşedeki gri parça yolunu kaybetmiş: üstüne basarsan seni takip eder, yuvaya kadar götürürsen kurtarırsın (isteğe bağlı).
-STORY=Yamalı seni eyerden itti. Kutunun dibine düştün. Eyerine geri dönmelisin!
+YAMALI=Orada kal, şapkalı. Dipte rahat edersin.
+SAPKALI=Şapka yerinde. Gerisi kolay.
+HINT=Q / E ile dön. Şeklin uyunca yuva parlar.
+OUTRO=Kutunun kenarına tırmandım. Aşağıda kocaman bir halı var.
+FLEE=Halıda görüşürüz! Tabii oraya kadar gelebilirsen.
 MAP
 ##############
 #P...#......L#

@@ -38,9 +38,10 @@ namespace KayipParca
         [Tooltip("Oyuncu ve ayna klon bu prefabdan uretilir. Menu: Kayıp Parça > 4) Parça Prefabını Kur")]
         public PieceView piecePrefab;
 
-        [Header("Sesler (sonradan ekleyin, bos kalabilir)")]
+        [Header("Sesler (bos birakilanlar Resources/KayipParca/Audio'dan yuklenir)")]
         public AudioClip sfxMove;
         public AudioClip sfxRotate, sfxStation, sfxBump, sfxDeath, sfxFit, sfxWin, sfxLaser, sfxFire, sfxGrab;
+        public AudioClip sfxGlow, sfxLostFound, sfxLostScared, sfxLostSaved, sfxEnemyStep, sfxPaw, sfxLaserOn, sfxRoar, sfxSnore;
 
         [Header("Ayarlar")]
         [Tooltip("1 = baslik ekrani ve giris hikayesiyle basla. Baska bir sayi = dogrudan o seviyeden (test icin).")]
@@ -128,8 +129,23 @@ namespace KayipParca
         GUIStyle cheatLabel, cheatButton;
 
         // ------------------------------------------------------------------ yasam dongusu
+        static AudioClip Clip(AudioClip set, string file) => set ? set : Resources.Load<AudioClip>("KayipParca/Audio/" + file);
+
+        /// Inspector'da bos birakilan sesleri Resources/KayipParca/Audio'daki dosyalarla doldurur (Tools/ses_bolum1.py).
+        void LoadDefaultSounds()
+        {
+            sfxMove = Clip(sfxMove, "hareket"); sfxRotate = Clip(sfxRotate, "dondurme"); sfxBump = Clip(sfxBump, "carpma");
+            sfxStation = Clip(sfxStation, "istasyon"); sfxDeath = Clip(sfxDeath, "olum"); sfxFit = Clip(sfxFit, "yuvaya_oturma");
+            sfxWin = Clip(sfxWin, "seviye_bitti"); sfxLaser = Clip(sfxLaser, "lazer_degme"); sfxFire = Clip(sfxFire, "ates_topu");
+            sfxGrab = Clip(sfxGrab, "vinc"); sfxGlow = Clip(sfxGlow, "yuva_parliyor"); sfxLostFound = Clip(sfxLostFound, "kayip_bulundu");
+            sfxLostScared = Clip(sfxLostScared, "kayip_korktu"); sfxLostSaved = Clip(sfxLostSaved, "kayip_kurtarildi");
+            sfxEnemyStep = Clip(sfxEnemyStep, "cirkin_adim"); sfxPaw = Clip(sfxPaw, "pati"); sfxLaserOn = Clip(sfxLaserOn, "lazer_acilma");
+            sfxRoar = Clip(sfxRoar, "ejderha_kukreme"); sfxSnore = Clip(sfxSnore, "ejderha_horlama");
+        }
+
         void Start()
         {
+            LoadDefaultSounds();
             if (!piecePrefab)
             {
                 Debug.LogError("[KayipParca] LevelManager.piecePrefab boş. Menü: Kayıp Parça > 4) Parça Prefabını Kur", this);
@@ -138,6 +154,8 @@ namespace KayipParca
             }
             cam = Camera.main;
             LayoutHud();
+            dialogue = gameObject.AddComponent<Dialogue>();
+            if (messageText) dialogue.Init(cam, messageText.canvas, messageText.font);
             entries = Chapters.Load();
             LoadRescued();
             foreach (var e in entries)
@@ -169,6 +187,23 @@ namespace KayipParca
             if (a <= 5 || a == 8) Step(a);
             else if (a == 6) Undo();
             else if (a == 7) { Play(sfxBump); ResetState(); }
+        }
+
+        // ------------------------------------------------------------------ konusmalar (Dialogue.cs)
+        Dialogue dialogue;
+        const float RiderSpace = 4.6f;   // 1-7. seviyelerde tahtanin saginda ejderhali Yamali'ya ayrilan genislik
+        bool HasRider => data != null && !data.hasDragon && (!string.IsNullOrEmpty(data.yamaliLine) || !string.IsNullOrEmpty(data.flee));
+        Transform YamaliAnchor => data != null && data.hasDragon ? (yamaliSr ? yamaliSr.transform : null) : (dialogue ? dialogue.RiderYamali : null);
+
+        IEnumerator Conversation(int i)
+        {
+            if (!dialogue || data == null) yield break;
+            yield return new WaitForSeconds(.35f);
+            if (index != i) yield break;
+            dialogue.Say(true, YamaliAnchor, data.yamaliLine, 3.4f, .9f);
+            if (!string.IsNullOrEmpty(data.yamaliLine)) yield return new WaitForSeconds(2.4f);
+            if (index != i || !player) yield break;
+            dialogue.Say(false, player.transform, data.heroLine, 3.2f, .9f);
         }
 
         void LateUpdate()
@@ -388,9 +423,12 @@ namespace KayipParca
             if (!firstLoad && themes) yield return themes.FadeOut();
             firstLoad = false;
             Build(i);
-            ShowMessage($"{LevelNumber()}. {data.name}" + (string.IsNullOrEmpty(data.story) ? "" : "\n<size=30>" + data.story + "</size>"));
+            bool talk = !string.IsNullOrEmpty(data.yamaliLine) || !string.IsNullOrEmpty(data.heroLine);
+            ShowMessage($"{LevelNumber()}. {data.name}" + (talk || string.IsNullOrEmpty(data.story) ? "" : "\n<size=30>" + data.story + "</size>"));
             introShowing = true;
+            if (dialogue) dialogue.HideAll();
             if (themes) yield return themes.FadeIn(data.theme);
+            if (talk) StartCoroutine(Conversation(i));
             busy = false;
             for (float t = 0; t < IntroHold && introShowing && index == i; t += Time.deltaTime) yield return null;
             if (introShowing && !busy && !inScreen && index == i) { introShowing = false; ShowMessage(""); }
@@ -545,9 +583,15 @@ namespace KayipParca
             float bottom = Mathf.Clamp01(BottomReserve * k / Mathf.Max(1, Screen.height));
             float free = Mathf.Max(.4f, 1f - top - bottom);              // ekran yuksekliginin tahtaya kalan payi
             float marginX = data.theme == 5 ? 2.2f : 1.4f, marginY = data.theme == 5 ? 1.2f : .45f;
-            cam.orthographicSize = Mathf.Max((data.height / 2f + marginY) / free, (data.width / 2f + marginX) / cam.aspect);
+            float rider = HasRider ? RiderSpace : 0f;
+            cam.orthographicSize = Mathf.Max((data.height / 2f + marginY) / free, (data.width / 2f + marginX + rider / 2f) / cam.aspect);
             // serbest bolgenin ortasi ekran ortasindan (top - bottom) / 2 kadar asagida: kamerayi o kadar yukari al
-            camCenter = levelCenter + new Vector3(0, (top - bottom) * cam.orthographicSize, 0);
+            camCenter = levelCenter + new Vector3(rider / 2f, (top - bottom) * cam.orthographicSize, 0);
+            if (dialogue)
+            {
+                if (HasRider) dialogue.ShowRider(new Vector3(data.width + marginX * .4f + rider / 2f, levelCenter.y + .8f, 0), rider * .82f);
+                else dialogue.HideRider();
+            }
             if (snap) cam.transform.position = new Vector3(camCenter.x, camCenter.y, -10);
 
             float viewH = cam.orthographicSize * 2f, viewW = viewH * cam.aspect;
@@ -710,15 +754,17 @@ namespace KayipParca
             }
             if (!n.crane && data.hasCrane && !n.calm && data.At(n.p) == 'K') { n.crane = true; n.hook = data.hookStart; }
 
+            var before = s;
             history.Push(s);
             s = n;
             ApplyVisuals(snap: false);
-            if (s.crane && !history.Peek().crane) Flash("Vinç senin kontrolünde! Ejderha kanadını kaldırınca Yamalı'yı eyerden yakala.");
-            if (burned) { Play(sfxFire); Flash("Halat yandı! Kanca başa döndü."); }
-            if (grabbed) { Play(sfxGrab); Flash("Yamalı'yı yakaladın! Ejderha sakinleşti. Onu nereye bırakacaksın?"); }
-            if (picked) Flash("Kayıp parça seni takip ediyor! Onu yuvaya kadar götür.");
-            if (scared) { Play(sfxBump); Flash("Kayıp parça korktu ve yerine kaçtı!"); }
-            if (dropped) Flash(s.ending == 'T' ? "Yamalı çöpe gitti. Şimdi eyere otur!" : "Yamalı kendi kutusuna döndü. Şimdi eyere otur!");
+            TurnSounds(before, s, picked, scared, grabbed);
+            if (s.crane && !history.Peek().crane) Flash("Vinç sende. Kanat kalkınca Yamalı'yı eyerden kap.");
+            if (burned) { Play(sfxFire); Flash("Halat yandı. Kanca başa döndü."); }
+            if (grabbed) { Play(sfxGrab); Flash("Onu çöpe götür."); if (dialogue) dialogue.Say(true, YamaliAnchor, "Bırak beni! O eyer benim!", 2.6f, .8f); }
+            if (picked) Flash("Gri parça peşine takıldı. Onu da eve götür.");
+            if (scared) Flash("Gri parça korktu, yerine kaçtı.");
+            if (dropped) { Flash("Eyer boş. Şimdi otur!"); if (dialogue) dialogue.Say(true, YamaliAnchor, "Bunu unutmayacağım, şapkalı!", 3f, .8f); }
 
             if (death != Death.None) { StartCoroutine(Die(death)); return; }
 
@@ -728,6 +774,28 @@ namespace KayipParca
                        (pc != 'Y' || (s.calm && s.ending != '\0'));
             if (win) { StartCoroutine(Win()); return; }
             if (s.moves <= 0) StartCoroutine(Die(Death.Moves));
+        }
+
+        /// Bir turun ortam sesleri: yuva parlamasi, kayip parca, dusman adimi, lazer acilmasi, ejderha.
+        void TurnSounds(State a, State b, bool picked, bool scared, bool grabbed)
+        {
+            if (!Fits(a) && Fits(b)) Play(sfxGlow);
+            if (picked) Play(sfxLostFound);
+            if (scared) Play(sfxLostScared);
+            if (data.enemies.Count > 0 && a.t != b.t) Play(data.theme == 5 ? sfxPaw : sfxEnemyStep);   // kedi temasinda dusmanlar pati
+            foreach (var l in data.lasers) if (!l.IsOn(a.t) && l.IsOn(b.t)) { Play(sfxLaserOn); break; }
+            if (!b.calm)
+                foreach (var f in data.fires)
+                    if (f.cells.Count > 0 && f.At(b.t, f.cells[0])) { Play(sfxRoar); Play(sfxFire); break; }   // ejderha ates topu atti
+            if (grabbed) Play(sfxSnore);   // Yamali gidince ejderha uykuya dalar
+        }
+
+        /// Oyuncunun (ya da klonun) sekli herhangi bir yuvaya uyuyor mu?
+        bool Fits(State st)
+        {
+            foreach (var kv in data.goals)
+                if (kv.Key == 'g' ? st.cs == kv.Value : st.ps == kv.Value) return true;
+            return false;
         }
 
         void Undo()
@@ -870,10 +938,10 @@ namespace KayipParca
             string msg;
             switch (why)
             {
-                case Death.Laser: msg = "Lazer! Parçalara ayrıldın."; Play(sfxLaser ? sfxLaser : sfxDeath); break;
-                case Death.Fire: msg = "Yandın!"; Play(sfxFire ? sfxFire : sfxDeath); break;
-                case Death.Enemy: msg = "Yakalandın!"; Play(sfxDeath); break;
-                case Death.Moves: msg = "Hamlen bitti."; Play(sfxDeath); break;
+                case Death.Laser: msg = "Lazer! Tekrar dene."; Play(sfxLaser ? sfxLaser : sfxDeath); break;
+                case Death.Fire: msg = "Kenarların kavruldu. Tekrar dene."; Play(sfxFire ? sfxFire : sfxDeath); break;
+                case Death.Enemy: msg = "Yakalandın. Tekrar dene."; Play(sfxDeath); break;
+                case Death.Moves: msg = "Hamle kalmadı. R ile baştan."; Play(sfxDeath); break;
                 default: msg = "Ah! Tekrar dene."; Play(sfxDeath); break;
             }
             if (why == Death.Moves) { player.SetFace(2); if (clone) clone.SetFace(2); }
@@ -893,8 +961,14 @@ namespace KayipParca
             yield return new WaitForSeconds(0.35f);
             Play(sfxWin);
             bool saved = data.hasLost && s.following;
-            if (saved) { rescued.Add(entries[index].file); SaveRescued(); ApplyVisuals(snap: false); }
-            ShowMessage("Tık!" + (saved ? "\n<size=34>Kayıp parçayı kurtardın!</size>" : "") + (string.IsNullOrEmpty(data.outro) ? "" : "\n<size=34>" + data.outro + "</size>"));
+            if (saved) { rescued.Add(entries[index].file); SaveRescued(); ApplyVisuals(snap: false); Play(sfxLostSaved); }
+            if (dialogue && HasRider)
+            {
+                dialogue.Say(true, YamaliAnchor, data.flee, 2.2f, .9f);
+                yield return new WaitForSeconds(1.1f);
+                yield return dialogue.Flee();
+            }
+            ShowMessage("Tık!" + (saved ? "\n<size=34>Bir parça daha evine döndü.</size>" : "") + (string.IsNullOrEmpty(data.outro) ? "" : "\n<size=34>" + data.outro + "</size>"));
             yield return new WaitForSeconds(string.IsNullOrEmpty(data.outro) ? 0.6f : OutroHold);
 
             PickEnding(out string endText, out string endImg);
@@ -934,7 +1008,7 @@ namespace KayipParca
             int need = Mathf.CeilToInt(total * 2f / 3f);
             if (total > 0 && r == 0 && !string.IsNullOrEmpty(data.endDark)) { text = data.endDark; img = "Story/ending_dark"; }
             else if (total > 0 && r < need && !string.IsNullOrEmpty(data.endAlone)) { text = data.endAlone; img = "Story/ending_alone"; }
-            else if (s.ending == 'T' && !string.IsNullOrEmpty(data.endT)) { text = data.endT; img = "Story/ending_t"; }
+            else if (!string.IsNullOrEmpty(data.endT)) { text = data.endT; img = "Story/ending_t"; }   // vinc Yamali'yi hep cope birakir
             else if (s.ending == 'B' && !string.IsNullOrEmpty(data.endB)) { text = data.endB; img = "Story/ending_b"; }
             if (text != null && total > 0) text += $"||Kurtarılan parçalar: {r}/{total}";
         }

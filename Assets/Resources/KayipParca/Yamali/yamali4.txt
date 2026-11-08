@@ -1,8 +1,8 @@
-NAME=Kedinin Yatağı
+NAME=Kayan Yastıklar
 THEME=5
-STORY=Kedinin yatağı yumuşak ama altı diken dolu tüy yumağı.|Kayan yastıkların üstünde dengede kalmalıyım.
-HINT=Kayan platform seni de taşır. Yay seni çok yükseğe fırlatır.
-OUTRO=Kedi uyanmadı. Şanslıyım.
+STORY=Yamalı: "Kedi uyuyor. Sessiz ol. Sessiz ol diyorum! Blup demeyin!"
+HINT=Kayan yastıklar seni taşır. Yay seni çok yükseğe fırlatır.
+OUTRO="Kedi uyanmadı. Kimse bana teşekkür etmedi ama olsun."
 MAP
 ................................................................................................
 ................................................................................................

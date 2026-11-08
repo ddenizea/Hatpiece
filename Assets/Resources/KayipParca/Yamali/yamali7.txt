@@ -1,8 +1,8 @@
 NAME=Masanın Bacağı
 THEME=6
-STORY=Masanın bacağı gökyüzüne kadar uzanıyor.|Tepede, resmin içinde, o şapkalı beni bekliyor. Tırmanıyorum.
+STORY=Yamalı: "Masa. Tepesinde resim. Resmin içinde şapkalı. Tırmanıyorum."
 HINT=Hep yukarı. Düşersen son bayraktan başlarsın.
-OUTRO=Masanın üstündeyim. Resim tam karşımda.
+OUTRO="Masanın üstündeyim. Ordum arkamda. Çoğu."
 MAP
 ..........................
 ..........................

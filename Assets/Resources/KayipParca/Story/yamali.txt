@@ -1,13 +1,13 @@
-# Bölüm 2: Yamalı'nın İntikamı. INTRO satırları: resim|metin (| sonrası satır sonu için yine | kullanılır)
-INTRO=y_intro_1|Karanlık. Islak. Kokulu.|Yamalı gözlerini açtığında kendini çöp kutusunun dibinde buldu.
-INTRO=y_intro_1|Bir zamanlar ejderhanın binicisiydi. Şimdi sadece bir çöp.|O şapkalı küçük parça her şeyi elinden almıştı.
-INTRO=y_intro_2|Yamalı ayağa kalktı.|"İntikam vakti."
-INTRO=y_intro_2|Ev, yolunu kaybetmiş yama parçalarıyla doluydu.|Hepsini toplayacak, bir ordu kuracak ve resme geri dönecekti.
+# Bölüm 2: Yamalı'nın İntikamı. INTRO satırları: resim|metin (| = yeni satır)
+INTRO=y_intro_1|Islak. Karanlık. Muz kabuğu kokuyor.|Yamalı gözlerini açtı: çöp kutusunun dibindeydi.
+INTRO=y_intro_1|"Bir dakika önce ejderhanın sırtındaydım.|Şimdi bir peynir kabuğunun yanındayım."
+INTRO=y_intro_2|"O şapkalı her şeyi aldı. Eyeri, resmi, alkışları."|Yamalı ayağa kalktı. "İntikam vakti."
+INTRO=y_intro_2|"Bu evde benim gibi yerini bulamamış bir sürü parça var.|Hepsini toplayacağım. Bir ordu kuracağım."
 HINT=[A][D] yürü    [Boşluk] zıpla    [S] platformdan in    [R] yeniden
 CLEAR=Seviye tamam!
-PICKUP=Bir yama orduya katıldı!
-WAR=Yamalı ordusuyla resmin önüne vardı.|Şapkalı da kurtardığı parçalarla onu bekliyordu.
-END_YAMA=Yama ordusu daha kalabalıktı.|Şapkalı'nın parçaları dağıldı ve Yamalı ejderhanın eyerine yeniden oturdu.|Ejderha artık yamalı.
-END_HERO=Şapkalı'nın arkasında daha çok parça vardı.|Yamalı'nın ordusu dağıldı; Yamalı bu kez kendi isteğiyle kutusuna döndü.|Ejderha tam.
-END_BOTH=İki ordu eşitti.|Çarpıştılar ve ikisi birlikte masadan düştü.|Ejderhanın eyeri boş kaldı.
+PICKUP=Blup! Bir yama orduya katıldı.
+WAR=Yamalı ordusuyla resmin önüne vardı. Şapkalı da kurtardığı parçalarla onu bekliyordu.|Yamalı: "Eyerimi geri almaya geldim."|Şapkalı: "Eyer kimsenin değil. Ejderhanın uykusu için."
+END_YAMA=Yama ordusu daha kalabalıktı. Şapkalı'nın parçaları dağıldı, Yamalı eyere geri oturdu.|Ejderha bir gözünü açtı. Artık yamalı bir ejderha.
+END_HERO=Şapkalı'nın arkasında daha çok parça vardı. Yama ordusu dağıldı.|Yamalı bu kez kimse itmeden masadan indi: "Belki başka bir resim beni bekliyordur."|Ejderha uyudu.
+END_BOTH=İki ordu eşitti. Çarpıştılar ve Şapkalı ile Yamalı birlikte masadan düştü. Eyer boş kaldı.|Aşağıdan iki ses: "Senin yüzünden." "Hayır, senin."
 THANKS=HATPIECE|Oynadığın için teşekkürler!

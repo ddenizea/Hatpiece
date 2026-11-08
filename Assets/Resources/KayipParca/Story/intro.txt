@@ -1,4 +1,3 @@
-intro_1|Bir çocuk 1000 parçalık "Uyuyan Ejderha" yapbozunu bitirmek üzereydi. Eksik kalan tek parça, ejderhanın sırtındaki biniciydi: yani sen.
-intro_2|O gece masada yabancı bir parça belirdi: Yamalı. Seni masadan itti ve eyere, senin yerine kuruldu.
-intro_3|Resim tamamlandı ama bir şeyler yanlıştı. Dizginler Yamalı'nın elindeydi; ejderhanın gözleri kızardı ve uyandı.
-intro_4|Kutunun dibinde uyandın. Eyerine geri dönmelisin!
+intro_1|Gece. Masada neredeyse bitmiş bir yapboz: uyuyan bir ejderha ve sırtında şapkalı küçük bir binici.
+intro_2|Kenardan yamalı, yamuk bir parça tırmandı. "Bu eyer artık benim." Bir itme, ve binici masadan düştü.
+intro_3|Kutunun dibi. Karanlık. Şapka hâlâ yerinde. "Tamam. Geri dönüyorum."

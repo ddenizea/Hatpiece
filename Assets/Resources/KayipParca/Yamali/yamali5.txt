@@ -1,8 +1,8 @@
-NAME=Oyuncak Kalesi
+NAME=Kale Burçları
 THEME=3
-STORY=Oyuncak kalesinin burçları. Şapkalı burada beni yenmişti.|Bu sefer kale benim.
-HINT=Tek yönlü platformlardan aşağıdan geçebilirsin; S ile aşağı inersin.
-OUTRO=Kalenin bayrağına bir yama diktim.
+STORY=Yamalı: "Burada şapkalı askerlerimi dağıtmıştı. Bu sefer kale benim."
+HINT=İnce platformlardan alttan geçebilirsin. S ile aşağı inersin.
+OUTRO="Kalenin bayrağına bir yama diktim. Yakıştı."
 MAP
 ....................................................................................................
 ....................................................................................................

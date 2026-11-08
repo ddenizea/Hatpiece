@@ -4,8 +4,10 @@ MOVES=26
 SHAPE=1100
 GOAL_G=0110
 GOAL_g=0011
-HINT=Ayna klonun seni aynada izler: sen sağa gidersen o sola gider. İkiniz de yuvanıza oturmalısınız.
-STORY=Su birikintisindeki yansıman canlandı. Onu da yuvasına götür.
+YAMALI=Fayanslar ayna gibi parlıyor. Bakalım yansımanla anlaşabilecek misin?
+SAPKALI=Sağa diyorum, sola gidiyor. Tam benim gibi inatçı.
+HINT=Yansıman tersine yürür. İkiniz de kendi yuvanıza oturmalısınız.
+FLEE=Yansımanla iyi anlaştın. Ben yalnız çalışırım. Hoşça kal!
 MAP
 #################
 #.......#.......#

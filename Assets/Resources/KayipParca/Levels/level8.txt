@@ -5,12 +5,12 @@ SHAPE=1010
 GOAL_Y=1110
 FIRE=12,3,W,6,0
 CHEST=2,6,5
-STORY=Yapbozun içindesin. Eyerde Yamalı var ve ejderha seni gördü!
-HINT=Ejderha her ateş püskürttükten sonra nefeslenmek için kanadını 2 tur kaldırır, sırtındaki eyer açıkta kalır. Kancayı yukarıdan indir. Kafasının üstündeki sayı, bir sonraki ateşe kalan tur.
-END_T=SON: EYER SAHİBİNİ BULDU|Yamalı'yı çöpe attın, eyere oturdun ve ejderha derin bir uykuya daldı. Yol boyunca kurtardığın parçalar da birer birer kendi yerlerine yerleşti.
-END_B=GERÇEK SON: KİMSE EKSİK KALMASIN|Yamalı da kayıp bir parçaydı. Onu kendi kutusuna, Korsan Gemisi yapbozuna götürdün. Kurtardığın bütün parçalar evine döndü... Korsan kutusu hafifçe sallanıyor.
-END_ALONE=SON: YALNIZ BİNİCİ|Eyere oturdun ve ejderha uykuya daldı. Ama kutunun dibinde hâlâ yerini bulamamış parçalar var. Resim tamam, ama biraz soğuk.
-END_DARK=GİZLİ SON: YENİ YAMALI|Eyeri geri aldın ama yol boyunca kimseye el uzatmadın. Kenarların yontuldu, gözlerin kızardı. Kutunun dibinde bir parça daha uyanıyor... Çirkin parçalar işte böyle doğuyordu.
+YAMALI=Sıkıysa yakala, şapkalı!
+SAPKALI=Vinç kumandası bende, Yamalı. Ejderha uyumak istiyor.
+HINT=Ejderha ateşten sonra iki tur kanadını kaldırır. O an kancayı eyere indir. Kafasındaki sayı, sıradaki ateşe kalan tur.
+END_T=SON: EYER SAHİBİNİ BULDU|Yamalı'yı çöpe bıraktın. Kapaktan son bir ses geldi: "Bunu unutmayacağım!" Eyere oturdun, ejderha derin bir uykuya daldı. Yol boyunca kurtardığın parçalar birer birer yerlerine yerleşti.
+END_ALONE=SON: YALNIZ BİNİCİ|Eyere oturdun, ejderha uyudu. Ama kutunun dibinde hâlâ yolunu bulamamış parçalar var. Resim tamam, ama biraz soğuk. Çöpten bir kıkırdama geliyor.
+END_DARK=GİZLİ SON: YENİ YAMALI|Eyeri geri aldın ama yol boyunca kimseye el uzatmadın. Kenarların yontuldu, gözlerin kızardı. Çöpte Yamalı gülümsedi: "Hoş geldin, kardeşim."
 MAP
 ####################
 #P.....#..H..#######
@@ -19,6 +19,6 @@ MAP
 #..#.....o...DDDDDD#
 #T.#....S....DDDDDD#
 #..#.........#######
-#B...........#######
+#............#######
 #.K..........#######
 ####################

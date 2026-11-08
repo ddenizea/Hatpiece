@@ -1,8 +1,7 @@
-NAME=Gece Koridoru
+NAME=Asansörlü Karanlık
 THEME=4
-STORY=Karanlık koridor. Duvarlar çok yüksek.|Neyse ki bu evde asansör niyetine bir sürü şey var.
+STORY=Yamalı: "Fişi ben çekmiştim. Şimdi ben de görmüyorum. Harika."
 HINT=Asansörün üstüne çık, seni taşır. Tavandaki dikenlere dikkat.
-OUTRO=Koridorun sonunda kedi kokusu var.
 MAP
 ...............################.................................................
 ...............################.................................................

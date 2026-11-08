@@ -75,6 +75,10 @@ namespace KayipParca
                 for (int i = list.Count; i < def.Length; i++) list.Add(def[i]);
                 themes = list.ToArray();
             }
+            // Muzik bos birakilan temalara ana melodinin uygun surumu (Resources/KayipParca/Audio)
+            string[] music = { "muzik_muzik_kutusu", "muzik_kalimba", "muzik_ksilofon", "muzik_ksilofon", "muzik_muzik_kutusu", "muzik_kalimba", "muzik_muzik_kutusu", "muzik_muzik_kutusu" };
+            for (int i = 0; i < themes.Length && i < music.Length; i++)
+                if (!themes[i].music) { themes[i].music = Resources.Load<AudioClip>("KayipParca/Audio/" + music[i]); themes[i].musicVolume = Mathf.Min(themes[i].musicVolume, .35f); }
         }
 
         Theme current;

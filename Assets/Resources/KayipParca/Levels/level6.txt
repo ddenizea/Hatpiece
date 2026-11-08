@@ -3,8 +3,10 @@ THEME=4
 MOVES=45
 SHAPE=0000
 GOAL_G=1010
-HINT=Karanlıkta sadece etrafını görebilirsin. Çukurlara dikkat.
-STORY=Ejderha evin bütün ışıklarını söndürdü.
+YAMALI=Lambanın fişini çektim. Karanlıktan korkmuyorsun, değil mi?
+SAPKALI=Şapkamın altı zaten hep karanlık.
+HINT=Karanlıkta sadece çevreni görürsün. Adımını sayarak at.
+FLEE=Karanlıkta da yolunu buldun ha? Kediyle tanış o zaman.
 MAP
 ##################
 #P.#......X......#

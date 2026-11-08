@@ -3,8 +3,10 @@ THEME=1
 MOVES=32
 SHAPE=1000
 GOAL_G=1101
-HINT=İstasyona hangi yönden girersen o taraftaki kenar değişir. Her istasyon yalnızca bir kez çalışır, sonra söner. Hangisine hangi yönden gireceğini iyi düşün.
-STORY=Ejderha toz canavarlarını üstüne saldı.
+YAMALI=Bu halının altını kimse süpürmez. Toz canavarları seni çok sevecek.
+SAPKALI=Hapşu. … Tamam, dikkatli yürüyeceğim.
+HINT=İstasyona hangi yönden girersen o kenar değişir. Her istasyon bir kez çalışır.
+FLEE=Hapşu! Bu tozlar beni de tuttu. Mutfağa kaçıyorum!
 MAP
 ################
 #P..X......XL..#

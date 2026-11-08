@@ -6,8 +6,11 @@ GOAL_G=1111
 ENEMY=6,1,6,7
 ENEMY=11,7,11,1
 ENEMY=16,7,1,7
-HINT=Patiler her hamlende bir kare iner. Rotalarını takip et ve yuvaya ulaş.
-STORY=Lazer ışığı kediyi uyandırdı! Yatağından geçmen gerekiyor.
+YAMALI=O lazer kediyi uyandırmış. Benim suçum değil. … Tamam, biraz benim suçum.
+SAPKALI=Patiler yavaş iner. Ben daha hızlı düşünürüm.
+HINT=Patiler her hamlende bir kare iner. Yollarını izle.
+OUTRO=Yatak bitti. Önümde masa, masanın üstünde resim.
+FLEE=Resme dönüyorum. Orada ejderha benim tarafımda!
 MAP
 ##################
 #P.......oL......#

@@ -1,8 +1,7 @@
-NAME=Resmin İçi
+NAME=Son Hücum
 THEME=7
-STORY=Resmin içindeyim. Ejderha uyuyor.|Şapkalı ve kurtardığı parçalar karşımda. Ordumu arkama aldım.
+STORY=Yamalı: "Ejderha uyuyor. Şapkalı eyerde. Ve ben buradayım."
 HINT=Son engeller. Sonunda iki ordu karşılaşacak.
-OUTRO=Resmin ortasına vardım.
 MAP
 ..................................................................................................................................
 ..................................................................................................................................
