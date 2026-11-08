@@ -311,5 +311,5 @@ def make_characters():
 
 if __name__ == '__main__':
     make_characters()
-    make_walls(); make_floor(); make_fillets(); make_common(); slot_shapes(); make_backgrounds()
+    make_walls(); make_floor(); make_fillets(); make_common(); make_backgrounds()   # yuvalar: Tools/art_blob.py make_slots
     print('doodle art ok:', ROOT)

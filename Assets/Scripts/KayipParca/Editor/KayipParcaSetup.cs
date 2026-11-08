@@ -25,7 +25,7 @@ namespace KayipParca.EditorTools
             // Blob karakterler ve hikaye ekranlari 2x cozunurlukte (Tools/art_blob.py): 64 PPU, yumusak filtre.
             // Harita parcalari 32 px piksel sanati olarak kalir.
             string p = assetPath.Replace('\\', '/');
-            bool blob = p.Contains("/Art/Player/") || p.Contains("/Art/Enemies/") || p.Contains("/Art/Story/") || p.Contains("/Art/Yamali/")
+            bool blob = p.Contains("/Art/Player/") || p.Contains("/Art/Enemies/") || p.Contains("/Art/Story/") || p.Contains("/Art/Yamali/") || p.Contains("/Art/Slots/")
                      || System.Array.Exists(BlobCommon, n => p.EndsWith("/Art/Common/" + n + ".png"));
             ti.spritePixelsPerUnit = blob ? 64 : 32;
             ti.filterMode = blob ? FilterMode.Bilinear : FilterMode.Point;

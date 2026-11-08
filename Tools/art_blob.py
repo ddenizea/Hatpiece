@@ -381,6 +381,21 @@ def make_story():
     save(scene([(dark, 205, 70)]), 'Story', 'ending_dark.png')
 
 
+# ---------------------------------------------------------------- yuvalar: karakterle ayni blob cerceve + parlama
+def make_slots():
+    """Slots/slot_XXXX: parcanin kendi blob silueti, ici bos cerceve (oyunda gri/beyaz boyanir).
+    Slots/glow_XXXX: ayni cercevenin yumusak parlamasi (96 px, PPU 64)."""
+    from PIL import ImageChops
+    for sh in SHAPES:
+        ring = piece_img(sh, PX, face=None, outline=True)
+        save(ring, 'Slots', f'slot_{sh}.png')
+        G = 96
+        big = Image.new('L', (G, G), 0); big.paste(ring.split()[3], (16, 16))
+        glow = big.filter(ImageFilter.GaussianBlur(5)).point(lambda v: min(200, int(v * 1.9)))
+        out = Image.new('RGBA', (G, G), (255, 255, 255, 0)); out.putalpha(glow)
+        save(out, 'Slots', f'glow_{sh}.png')
+
+
 # ---------------------------------------------------------------- Bolum 2: Yamali'nin Intikami (platform), 2x
 YP = 64   # 32 px karo -> 64 px (PPU 64)
 
@@ -566,7 +581,7 @@ def sheet(path):
 
 
 if __name__ == '__main__':
-    make_player(); make_enemies(); make_common(); make_story()
+    make_player(); make_enemies(); make_common(); make_slots(); make_story()
     make_yamali_player(); make_yamali_tiles(); make_yamali_story()
     if '--sheet' in sys.argv: sheet(sys.argv[sys.argv.index('--sheet') + 1])
     print('blob art ok:', ROOT)
