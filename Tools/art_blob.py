@@ -7,6 +7,7 @@ Karakterler tek parca beyaz (kotu karakterler: siyah govde + beyaz kenar) kutle 
     python3 Tools/art_blob.py .            # Assets/Resources/KayipParca/Art altina yazar
     python3 Tools/art_blob.py . --sheet X  # ayrica X.png'ye kontrol tablosu cikarir
 
+Bolum 2 (Yamali'nin Intikami, platform) sprite'lari ve y_* hikaye ekranlari da burada (Art/Yamali, 2x).
 Hikaye: kahraman ejderhanin BINICISI; eyer (sirtindaki yuva) sol kenarda, ejderha omzunun uzerinden
 oyuncuya bakar (agzi sol ust, ates o yone cikar). Eyer kapagi = katlanmis kanat (chest_closed), acik = chest_glow.
 """
@@ -380,6 +381,170 @@ def make_story():
     save(scene([(dark, 205, 70)]), 'Story', 'ending_dark.png')
 
 
+# ---------------------------------------------------------------- Bolum 2: Yamali'nin Intikami (platform), 2x
+YP = 64   # 32 px karo -> 64 px (PPU 64)
+
+
+def yamali_frame(feet, dy=0, k=1.0):
+    """80x80 (k kat) kare: ters renkli Yamali govdesi + beyaz tombul bacaklar. feet: iki ayak ucu (80'lik uzayda)."""
+    size = int(80 * k)
+    body = yamali_img(int(64 * k))
+    legs = Ink(size, size)
+    for (hx_, hy), (fx, fy) in zip([(30, 58 + dy), (50, 58 + dy)], feet):
+        legs.line([(hx_ * k, hy * k), (fx * k, fy * k)], 8 * k)
+    out = compose(size, size, [(legs, W)])
+    out.alpha_composite(body, (int(8 * k), int((4 + dy) * k)))
+    return out
+
+
+def make_yamali_player():
+    save(yamali_frame([(30, 78), (50, 78)]), 'Yamali', 'yamali_idle_0.png')
+    save(yamali_frame([(30, 78), (50, 78)], dy=2), 'Yamali', 'yamali_idle_1.png')
+    run = [[(22, 78), (56, 78)], [(28, 78), (48, 73)], [(36, 78), (42, 76)], [(32, 73), (52, 78)]]
+    for i, f in enumerate(run): save(yamali_frame(f, dy=(i % 2) * 2), 'Yamali', f'yamali_run_{i}.png')
+    save(yamali_frame([(24, 72), (56, 72)], dy=-2), 'Yamali', 'yamali_jump.png')
+    save(yamali_frame([(20, 78), (60, 78)]), 'Yamali', 'yamali_fall.png')
+
+
+def eraser_img(k):
+    """Silgi: yamalari silen bekci. Beyaz blob govde, gri uc, kizgin kaslar, tombul bacaklar. k=2: ezilmis."""
+    px = YP
+    body, grey, ink, legs = Ink(px, px), Ink(px, px), Ink(px, px), Ink(px, px)
+    if k == 2:
+        body.rrect(4, 48, 60, 62, 6); grey.rrect(40, 48, 60, 62, 6); grey.rrect(40, 48, 47, 62, 1)
+        ink.line([(14, 54), (22, 56)], 2.5); ink.line([(26, 56), (34, 54)], 2.5)
+        return compose(px, px, [(body, W), (grey, 150), (ink, K)])
+    bob = k * 2
+    body.rrect(6, 12 + bob, 58, 50 + bob, 10); body.goo(2)
+    grey.rrect(40, 12 + bob, 58, 50 + bob, 10); grey.rrect(40, 12 + bob, 47, 50 + bob, 1)
+    for x, y in ((18, 28), (30, 28)): ink.circle(x, y + bob, 3.6)
+    ink.line([(13, 19 + bob), (22, 23 + bob)], 3); ink.line([(35, 19 + bob), (26, 23 + bob)], 3)
+    ink.line([(18, 40 + bob), (30, 38 + bob)], 2.8)
+    a, b = ((18, 46), (16, 62)), ((44, 46), (46, 62))
+    if k == 1: a, b = ((18, 48), (22, 62)), ((44, 48), (40, 62))
+    for p0, p1 in (a, b): legs.line([p0, p1], 7)
+    return compose(px, px, [(legs, W), (body, W), (grey, 150), (ink, K)])
+
+
+def make_yamali_tiles():
+    px = YP
+    # dikenler: yuvarlak uclu uc sivri
+    m = Ink(px, px)
+    for k in range(3):
+        x0 = 4 + k * 18.8
+        m.poly([(x0, 62), (x0 + 18.8, 62), (x0 + 9.4, 28)])
+    m.goo(1.6)
+    c = Ink(px, px)
+    for k in range(3): c.line([(4 + k * 18.8 + 9.4, 42), (4 + k * 18.8 + 9.4, 58)], 2.6)
+    up = compose(px, px, [(m, W), (c, K)])
+    save(up, 'Yamali', 'spike_up.png'); save(up.rotate(180), 'Yamali', 'spike_down.png')
+    save(up.rotate(90), 'Yamali', 'spike_left.png'); save(up.rotate(-90), 'Yamali', 'spike_right.png')
+    # tek yonlu platform
+    m = Ink(px, px); m.rrect(1, 1, 63, 18, 7)
+    c = Ink(px, px)
+    for x in (12, 32, 52): c.line([(x - 5, 9.6), (x + 5, 9.6)], 2.6)
+    save(compose(px, px, [(m, W), (c, K)]), 'Yamali', 'oneway.png')
+    # asansor / kayan platform parcasi
+    m = Ink(px, px); m.rrect(1, 1, 63, 30, 8)
+    c = Ink(px, px)
+    for x in (14, 50): c.circle(x, 16, 4)
+    c.line([(24, 16), (40, 16)], 3)
+    save(compose(px, px, [(m, W), (c, K)]), 'Yamali', 'lift.png')
+    # raylar (soluk noktalar)
+    for vert in (True, False):
+        m = Ink(px, px)
+        for k in range(3):
+            t = 10 + k * 22
+            x, y = (32, t) if vert else (t, 32)
+            m.circle(x, y, 3.2)
+        save(compose(px, px, [(m, 80)]), 'Yamali', 'rail_v.png' if vert else 'rail_h.png')
+    # cikis kapisi 64x128: beyaz cerceve, siyah ic, yildiz + ok
+    w, h = px, px * 2
+    m = Ink(w, h); m.rrect(4, 8, 60, 128, 26)
+    inner = Ink(w, h); inner.rrect(13, 17, 51, 128, 19)
+    star = Ink(w, h)
+    pts = []
+    for k in range(10):
+        a = -math.pi / 2 + k * math.pi / 5; r = 12 if k % 2 == 0 else 5.2
+        pts.append((32 + math.cos(a) * r, 52 + math.sin(a) * r))
+    star.poly(pts); star.goo(1.2)
+    star.line([(32, 72), (32, 100)], 3.2); star.poly([(22, 94), (42, 94), (32, 106)])
+    save(compose(w, h, [(m, W), (inner, K), (star, W)]), 'Yamali', 'exit.png')
+    # bayraklar
+    for up_ in (False, True):
+        m = Ink(px, px); m.rrect(16, 4, 20, 62, 2); m.ellipse(18, 60, 8, 4)
+        f = Ink(px, px); c = Ink(px, px)
+        if up_:
+            f.poly([(20, 6), (58, 14), (20, 28)]); f.goo(1.2)
+            c.poly([(25, 11), (46, 15), (25, 22)])
+        else:
+            f.poly([(20, 28), (32, 32), (30, 56), (20, 54)]); f.goo(1.2)
+        save(compose(px, px, [(m, W), (f, W), (c, K)]), 'Yamali', 'flag_up.png' if up_ else 'flag_down.png')
+    # yaylar
+    for k, hh in enumerate((20, 40)):
+        m = Ink(px, px); top = 62 - hh
+        m.rrect(6, top - 8, 58, top, 4)
+        pts = []
+        for i in range(6):
+            y = top + (62 - top) * i / 5
+            pts.append((16 if i % 2 == 0 else 48, y))
+        m.line(pts, 4.4)
+        m.rrect(10, 60, 54, 64, 2)
+        save(compose(px, px, [(m, W)]), 'Yamali', f'spring_{k}.png')
+    for k in range(3): save(eraser_img(k), 'Yamali', f'eraser_{k if k < 2 else "flat"}.png')
+
+
+def trash_parts(cx, base, w, h):
+    t = Ink(SW, SH); t.rrect(*at(cx - w / 2, base - h), *at(cx + w / 2, base), 13 * Z)
+    t.rrect(*at(cx - w / 2 - 12, base - h - 4), *at(cx + w / 2 + 12, base - h + 12), 6 * Z)
+    c = Ink(SW, SH)
+    for k in range(5):
+        x = cx - w / 2 + 25 + k * (w - 50) / 4
+        c.line([at(x, base - h + 24), at(x, base - 16)], 4 * Z)
+    return [(t, W), (c, K)]
+
+
+def ring_ink(cx, cy, r, w, v=W):
+    g = Ink(SW, SH); g.arc(*at(cx, cy), r * Z, 0, 360, w * Z); return (g, v)
+
+
+def make_yamali_story():
+    ugly = lambda px: piece_img('1101', px * Z, inverted=True)
+    # 1: cop kutusunda uyanis
+    parts = trash_parts(320, 345, 210, 165)
+    m = Ink(SW, SH)
+    for x, y in ((250, 118), (392, 108), (322, 78)): m.line([at(x, y), at(x + 14, y - 14)], 3.5 * Z); m.line([at(x + 14, y), at(x, y - 14)], 3.5 * Z)
+    for x, y in ((252, 186), (384, 190), (320, 176)): m.arc(*at(x, y), 9 * Z, 0, 360, 2.6 * Z)
+    save(scene(parts + [(m, W), (yamali_img(150 * Z), 245, 92)]), 'Story', 'y_intro_1.png')
+    # 2: intikam vakti: kutunun ustunde, etrafta yamalar
+    parts = trash_parts(320, 365, 180, 150)
+    arcs = Ink(SW, SH)
+    for r in (150, 170): arcs.arc(*at(320, 175), r * Z, 200, 340, 3 * Z)
+    standing = yamali_frame([(30, 78), (50, 78)], k=2.4)
+    save(scene(parts + [(arcs, 110), (standing, 224, 20), (ugly(70), 110, 270), (ugly(70), 185, 292), (ugly(70), 440, 292), (ugly(70), 515, 270)]), 'Story', 'y_intro_2.png')
+    # 3: savas: iki ordu karsi karsiya (Sapkali vs Yamali)
+    div = Ink(SW, SH); div.line([at(320, 50), at(320, 320)], 3 * Z)
+    vs = Ink(SW, SH)
+    vs.line([at(290, 28), at(300, 56), at(310, 28)], 4 * Z)                         # V
+    vs.arc(*at(338, 36), 7 * Z, 330, 90, 4 * Z); vs.arc(*at(338, 50), 7 * Z, 270, 510, 4 * Z)   # S (ust ilmek saat yonunun tersi, alt ilmek saat yonu)
+    hero = piece_img('1010', 110 * Z, hat=True)
+    lost = lambda: piece_img('1001', 60 * Z, face='happy', fill=G)
+    yam = yamali_frame([(30, 78), (50, 78)], k=2.7)
+    save(scene([(div, 90), (vs, W), (hero, 95, 125), (lost(), 45, 255), (lost(), 100, 278), (lost(), 160, 268), (lost(), 205, 246),
+                (yam, 382, 40), (ugly(60), 380, 250), (ugly(60), 430, 280), (ugly(60), 490, 270), (ugly(60), 540, 252)]), 'Story', 'y_war.png')
+    # 4: sonlar
+    ring = ring_ink(320, 180, 150, 5)
+    around = lambda n, rx, ry: [(320 + math.cos(math.radians(a)) * rx, 180 + math.sin(math.radians(a)) * ry) for a in range(0, 360, 360 // n)]
+    save(scene([ring, (yamali_img(150 * Z), 245, 105)] + [(ugly(40), x - 20, y - 20) for x, y in around(8, 190, 130)]), 'Story', 'y_end_yama.png')
+    save(scene([ring, (piece_img('1010', 140 * Z, face='happy', hat=True), 250, 110)] + [(piece_img('1001', 40 * Z, face='happy', fill=G), x - 20, y - 20) for x, y in around(6, 190, 130)]), 'Story', 'y_end_hero.png')
+    table = Ink(SW, SH); table.rrect(*at(40, 90), *at(600, 115), 10 * Z)
+    sp = Ink(SW, SH)
+    for x, y in ((235, 150), (410, 165), (320, 280)): sp.line([at(x - 9, y), at(x + 9, y)], 3 * Z); sp.line([at(x, y - 9), at(x, y + 9)], 3 * Z)
+    falling_h = piece_img('1010', 100 * Z, face='idle', hat=True).rotate(-25, resample=Image.BICUBIC, expand=True)
+    falling_y = yamali_img(100 * Z).rotate(20, resample=Image.BICUBIC, expand=True)
+    save(scene([(table, W), (sp, 200), (falling_h, 190, 200), (falling_y, 350, 225)]), 'Story', 'y_end_both.png')
+
+
 # ---------------------------------------------------------------- kontrol tablosu
 def sheet(path):
     names = [('Player', f'body_{s}.png') for s in ('1000', '1011', '1111', '0101')] + \
@@ -402,5 +567,6 @@ def sheet(path):
 
 if __name__ == '__main__':
     make_player(); make_enemies(); make_common(); make_story()
+    make_yamali_player(); make_yamali_tiles(); make_yamali_story()
     if '--sheet' in sys.argv: sheet(sys.argv[sys.argv.index('--sheet') + 1])
     print('blob art ok:', ROOT)

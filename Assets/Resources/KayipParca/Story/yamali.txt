@@ -1,13 +1,13 @@
 # Bölüm 2: Yamalı'nın İntikamı. INTRO satırları: resim|metin (| sonrası satır sonu için yine | kullanılır)
 INTRO=y_intro_1|Karanlık. Islak. Kokulu.|Yamalı gözlerini açtığında kendini çöp kutusunun dibinde buldu.
-INTRO=y_intro_1|Bir zamanlar ejderhanın kalbiydi. Şimdi sadece bir çöp.|O şapkalı küçük parça her şeyi elinden almıştı.
+INTRO=y_intro_1|Bir zamanlar ejderhanın binicisiydi. Şimdi sadece bir çöp.|O şapkalı küçük parça her şeyi elinden almıştı.
 INTRO=y_intro_2|Yamalı ayağa kalktı.|"İntikam vakti."
 INTRO=y_intro_2|Ev, yolunu kaybetmiş yama parçalarıyla doluydu.|Hepsini toplayacak, bir ordu kuracak ve resme geri dönecekti.
-HINT=A / D: yürü    Boşluk: zıpla    S: platformdan in    R: yeniden
+HINT=[A][D] yürü    [Boşluk] zıpla    [S] platformdan in    [R] yeniden
 CLEAR=Seviye tamam!
 PICKUP=Bir yama orduya katıldı!
-WAR=Yamalı ordusuyla resmin önüne vardı.|Kalp de kurtardığı parçalarla onu bekliyordu.
-END_YAMA=Yama ordusu daha kalabalıktı.|Kalbin parçaları dağıldı ve Yamalı ejderhanın göğsüne yeniden oturdu.|Ejderha artık yamalı.
-END_HERO=Kalbin arkasında daha çok parça vardı.|Yamalı'nın ordusu dağıldı; Yamalı bu kez kendi isteğiyle kutusuna döndü.|Ejderha tam.
-END_BOTH=İki ordu eşitti.|Çarpıştılar ve ikisi birlikte masadan düştü.|Ejderhanın kalbi boş kaldı.
+WAR=Yamalı ordusuyla resmin önüne vardı.|Şapkalı da kurtardığı parçalarla onu bekliyordu.
+END_YAMA=Yama ordusu daha kalabalıktı.|Şapkalı'nın parçaları dağıldı ve Yamalı ejderhanın eyerine yeniden oturdu.|Ejderha artık yamalı.
+END_HERO=Şapkalı'nın arkasında daha çok parça vardı.|Yamalı'nın ordusu dağıldı; Yamalı bu kez kendi isteğiyle kutusuna döndü.|Ejderha tam.
+END_BOTH=İki ordu eşitti.|Çarpıştılar ve ikisi birlikte masadan düştü.|Ejderhanın eyeri boş kaldı.
 THANKS=HATPIECE|Oynadığın için teşekkürler!

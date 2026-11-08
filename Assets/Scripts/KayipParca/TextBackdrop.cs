@@ -12,6 +12,8 @@ namespace KayipParca
     {
         public Text text;
         public Vector2 pad = new Vector2(40, 18);
+        /// Sifirdan buyukse zemin hep bu boyutta kalir (yaziya gore buyuyup kuculmez).
+        public Vector2 fixedSize;
 
         Image img;
         string lastText;
@@ -39,6 +41,7 @@ namespace KayipParca
             // preferredHeight kutu genisligiyle sarilmis yuksekliktir (zengin metin <size> etiketleri dahil).
             float w = Mathf.Min(text.preferredWidth, lastBox.x);
             float h = text.preferredHeight;
+            if (fixedSize.x > 0 && fixedSize.y > 0) { w = fixedSize.x - 2 * pad.x; h = fixedSize.y - 2 * pad.y; }
             var rt = (RectTransform)transform;
             rt.anchorMin = trt.anchorMin; rt.anchorMax = trt.anchorMax;
             rt.pivot = new Vector2(.5f, .5f);

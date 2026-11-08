@@ -13,7 +13,7 @@ namespace KayipParca
     public class KeyHints : MonoBehaviour
     {
         public float capHeight = 44f, gap = 34f;
-        public int capFont = 22, labelFont = 26;
+        public int capFont = 22, labelFont = 27;
 
         static readonly Regex KeyPattern = new Regex(@"\[([^\]]+)\]");
         Text source;

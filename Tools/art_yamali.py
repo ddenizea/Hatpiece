@@ -1,4 +1,5 @@
-"""Bolum 2 (Yamali'nin Intikami) icin siyah-beyaz doodle gorselleri. Ege ayni dosya adlariyla uzerine yazabilir.
+"""ESKI: Bolum 2 (Yamali'nin Intikami) doodle gorselleri. Artik Tools/art_blob.py (blob stili, 2x) ayni dosyalari uretir;
+bunu calistirmak blob sprite'larin uzerine yazar.
 
     python3 Tools/art_yamali.py .
 

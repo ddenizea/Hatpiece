@@ -23,11 +23,12 @@ namespace KayipParca
         public static Font DefaultFont => Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
         // ------------------------------------------------------------------ yazi tipleri (Resources/KayipParca/Fonts, OFL)
-        // Her sey Nunito: yuvarlak hatlari blob (tombul siluet) stiliyle uyumlu. Kalin kesim baslik, sayac ve tus
-        // kapaklarinda; yari kalin kesim etiket ve ipucu satirlarinda. FontStyle.Bold ile ayrica kalinlastirilmaz.
+        // Baslik, sayac, tus kapaklari: Fredoka Bold; kucuk etiketler (Sen, Hedef, Kurtarilan): Fredoka Medium.
+        // Yuvarlak, tombul hatlar blob stiliyle ayni dil. Cumleler: Nunito (ExtraBold mesaj/ipucu, SemiBold tus aciklamalari).
+        // Dosyalar zaten istenen kalinlikta; FontStyle.Bold yalnizca yerlesik Arial icin.
         static Font hud, hudLight, body, bodyLight;
-        public static Font Hud => hud ? hud : hud = LoadFont("Nunito-ExtraBold");              // baslik, sayaclar, tus kapaklari
-        public static Font HudLight => hudLight ? hudLight : hudLight = LoadFont("Nunito-SemiBold"); // kucuk etiketler
+        public static Font Hud => hud ? hud : hud = LoadFont("Fredoka-Bold");                     // baslik, sayaclar, tus kapaklari
+        public static Font HudLight => hudLight ? hudLight : hudLight = LoadFont("Fredoka-Medium"); // kucuk etiketler
         public static Font Body => body ? body : body = LoadFont("Nunito-ExtraBold");          // mesajlar, hikaye metni
         public static Font BodyLight => bodyLight ? bodyLight : bodyLight = LoadFont("Nunito-SemiBold"); // ipucu satiri
 
@@ -37,6 +38,7 @@ namespace KayipParca
             return f ? f : DefaultFont;
         }
         static bool IsCustom(Font f) => f && f.name != "LegacyRuntime";
+        static bool WantsBold(Font f) => !IsCustom(f);   // ozel yazi tipleri zaten kalin kesim
 
         public static void ConfigureScaler(CanvasScaler sc)
         {
@@ -128,7 +130,7 @@ namespace KayipParca
             if (font) t.font = font;
             t.fontSize = size; t.alignment = align; t.color = Color.white;
             // ozel yazi tipleri zaten kalin kesim; yerlesik Arial'de kalinlik FontStyle ile verilir
-            t.fontStyle = IsCustom(t.font) ? FontStyle.Normal : FontStyle.Bold;
+            t.fontStyle = WantsBold(t.font) ? FontStyle.Bold : FontStyle.Normal;
             t.supportRichText = true; t.raycastTarget = false;
             t.horizontalOverflow = HorizontalWrapMode.Wrap; t.verticalOverflow = VerticalWrapMode.Overflow;
             t.resizeTextForBestFit = false;
@@ -141,7 +143,7 @@ namespace KayipParca
         /// 9-dilim yuvarlak sprite'in kose yaricapini tuval biriminde ayarlar (RoundedSprite kenari 12 px).
         public static void SetCorner(Image img, float radius)
         {
-            if (img) img.pixelsPerUnitMultiplier = 12f / Mathf.Max(1f, radius);
+            if (img) img.pixelsPerUnitMultiplier = RoundedBorder / Mathf.Max(1f, radius);
         }
 
         /// Metni "[Tus] etiket" gruplarindan tus kapaklarina cevirir (KeyHints). Text'in .text'i kullanilmaya devam eder.
@@ -159,8 +161,8 @@ namespace KayipParca
             get
             {
                 if (circle) return circle;
-                const int n = 32; const float r = 15.5f;
-                var tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp, name = "UIKit_Circle" };
+                const int n = 128; const float r = 63.5f;
+                var tex = new Texture2D(n, n, TextureFormat.RGBA32, true) { filterMode = FilterMode.Trilinear, wrapMode = TextureWrapMode.Clamp, name = "UIKit_Circle" };
                 var px = new Color32[n * n];
                 for (int y = 0; y < n; y++)
                     for (int x = 0; x < n; x++)
@@ -168,22 +170,29 @@ namespace KayipParca
                         float d = Vector2.Distance(new Vector2(x + .5f, y + .5f), new Vector2(n / 2f, n / 2f));
                         px[y * n + x] = new Color32(255, 255, 255, (byte)(Mathf.Clamp01(r - d + .5f) * 255));
                     }
-                tex.SetPixels32(px); tex.Apply();
+                tex.SetPixels32(px); tex.Apply(true);
                 circle = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(.5f, .5f), 100, 0, SpriteMeshType.FullRect);
                 return circle;
             }
         }
 
-        /// Kurtarilan parca halkasi: dolu = gozlu beyaz top, bos = gri halka.
-        public static Image MakeDot(Transform parent, bool filled, float size = 22f)
+        /// Kurtarilan parca halkasi: dolu = gozlu beyaz top, bos = gri halka. inverted: siyah govde, beyaz kenar ve gozler (yama).
+        public static Image MakeDot(Transform parent, bool filled, float size = 22f, bool inverted = false)
         {
             var img = MakeImage(parent, filled ? "Dolu" : "Bos", filled ? Color.white : Mute);
             img.sprite = CircleSprite; img.rectTransform.sizeDelta = new Vector2(size, size);
             if (filled)
             {
-                foreach (var (x, y, r) in new[] { (-3.5f, -.5f, 3.6f), (3.5f, 1f, 4.2f) })
+                float k = size / 22f;
+                if (inverted)
                 {
-                    var eye = MakeImage(img.transform, "Goz", Color.black);
+                    var core = MakeImage(img.transform, "Ic", Color.black);
+                    core.sprite = CircleSprite;
+                    Pin(core.rectTransform, new Vector2(.5f, .5f), Vector2.zero, new Vector2(size - 5 * k, size - 5 * k));
+                }
+                foreach (var (x, y, r) in new[] { (-3.5f * k, -.5f * k, 3.6f * k), (3.5f * k, 1f * k, 4.2f * k) })
+                {
+                    var eye = MakeImage(img.transform, "Goz", inverted ? Color.white : Color.black);
                     eye.sprite = CircleSprite;
                     Pin(eye.rectTransform, new Vector2(.5f, .5f), new Vector2(x, y), new Vector2(r, r));
                 }
@@ -223,13 +232,14 @@ namespace KayipParca
 
         /// Metnin arkasina, yaziya gore boyutlanan yari saydam zemin koyar (acik renkli duvar / gokyuzu
         /// ustunde okunabilirlik icin). Metin bosken zemin gizlenir. Metin ortali (MiddleCenter) olmali.
-        public static Image AddBackdrop(Text t, Color col, Vector2 pad)
+        /// fixedSize verilirse zemin yaziya gore degil, hep o boyutta olur (metnin kutusuna ortali; yazi bosken gizlenir).
+        public static Image AddBackdrop(Text t, Color col, Vector2 pad, Vector2 fixedSize = default)
         {
             var bg = MakeImage(t.transform.parent, t.name + "_Zemin", col);
             bg.sprite = RoundedSprite; bg.type = Image.Type.Sliced;
             bg.transform.SetSiblingIndex(t.transform.GetSiblingIndex());   // metnin hemen arkasinda
             var fit = bg.gameObject.AddComponent<TextBackdrop>();
-            fit.text = t; fit.pad = pad;
+            fit.text = t; fit.pad = pad; fit.fixedSize = fixedSize;
             fit.Refresh();
             return bg;
         }
@@ -237,14 +247,17 @@ namespace KayipParca
         // ------------------------------------------------------------------ panel
 
         static Sprite rounded;
+        /// RoundedSprite'in kose yaricapi (px). SetCorner bunu istenen yaricapa olcekler.
+        public const float RoundedBorder = 48f;
         /// Kenarlari yuvarlatilmis beyaz 9-dilim sprite (calisma aninda uretilir, renk Image.color ile verilir).
+        /// 128 px ve mipmap'li: 48 birimlik koselerde 1:1, tus kapaklari gibi kucuk koselerde mipmap'le puruzsuz.
         public static Sprite RoundedSprite
         {
             get
             {
                 if (rounded) return rounded;
-                const int n = 32, r = 12;
-                var tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp, name = "UIKit_Rounded" };
+                const int n = 128, r = (int)RoundedBorder;
+                var tex = new Texture2D(n, n, TextureFormat.RGBA32, true) { filterMode = FilterMode.Trilinear, wrapMode = TextureWrapMode.Clamp, name = "UIKit_Rounded" };
                 var px = new Color32[n * n];
                 for (int y = 0; y < n; y++)
                     for (int x = 0; x < n; x++)
@@ -253,7 +266,7 @@ namespace KayipParca
                         float d = Vector2.Distance(new Vector2(x + .5f, y + .5f), new Vector2(cx, cy));
                         px[y * n + x] = new Color32(255, 255, 255, (byte)(Mathf.Clamp01(r - d + .5f) * 255));
                     }
-                tex.SetPixels32(px); tex.Apply();
+                tex.SetPixels32(px); tex.Apply(true);
                 rounded = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(.5f, .5f), 100, 0, SpriteMeshType.FullRect, new Vector4(r, r, r, r));
                 return rounded;
             }

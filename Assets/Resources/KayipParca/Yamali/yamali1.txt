@@ -1,7 +1,7 @@
 NAME=Çöpten Çıkış
 THEME=2
 STORY=Kabuk soyuntuları, ıslak peçeteler... Burası benim yerim değil.|Önce bu çöp kutusundan çıkmalıyım.
-HINT=A / D: yürü    Boşluk: zıpla (basılı tut, daha yükseğe)    S: platformdan aşağı in
+HINT=Boşluk'a basılı tutarsan daha yükseğe zıplarsın. S ile tek yönlü platformdan aşağı inersin.
 OUTRO=Mutfak fayansları. Yukarıda bir yerde o masa var.
 MAP
 ................................................................

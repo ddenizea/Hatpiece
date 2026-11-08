@@ -35,7 +35,7 @@ Hileler Editor'de ve build'de çalışır. `LevelManager > Cheats` kutusuyla kap
 
 Kahraman, "Uyuyan Ejderha" yapbozunun binici parçası: ejderhanın sırtındaki eyerde oturur. Yamalı adında yabancı bir parça onu masadan itip eyere kuruluyor ve ejderhayı sürmeye başlıyor. Ejderha kahramanın önüne engeller koyup kaçıyor. Finalde oyuncu bir oyuncak vinçle Yamalı'yı eyerden söküyor ve iki sondan birini seçiyor. (Seviye dosyasındaki `CHEST=` ve koddaki `chest*` adları eski "göğüs" mekaniğinden kalmadır: kanat kalkınca eyer açılır.)
 
-## Seviyeler (Bölüm 1: Ejderhanın Kalbi)
+## Seviyeler (Bölüm 1: Ejderhanın Binicisi)
 
 | # | Seviye | Mekanik |
 |---|---|---|
@@ -58,12 +58,12 @@ Tüm seviyeler `Tools/solver.py` ile çözülebilir olarak doğrulandı.
 
 Bölüm 1 siyah zemin üstünde beyaz çizimlerle oynanır. Zemin, duvar, engel, istasyon, lazer ve yuva doodle stilinde çizilir (`Tools/art_doodle.py`). Karakterler "blob" stilindedir (`Tools/art_blob.py`): tek parça tombul beyaz siluet, siyah nokta gözler, kontur yok (bacak yok: alt çıkıntıyla karışıyordu). Yapboz çıkıntıları (K D G B) blob üstünde yumuşak tümsekler olarak kalır; şapka sol üst köşede küçüktür, üst çıkıntıyı örtmez. Kahraman beyaz; kötü parçalar ve Yamalı ters renkte (siyah gövde, kalın beyaz kenar, beyaz gözler). Kayıp parça gri. Karakterler 2x çözünürlükte (64 px, PPU 64; ejderha 256x384), hikâye ekranları 1280x720 ve yumuşak filtreyle gelir, harita parçaları 32 px piksel olarak kalır (`KayipParcaTextureImporter` ayırır).
 
-Arayüz de aynı mürekkeple: tek yazı tipi Nunito (piksel yazı tipi kaldırıldı), kontur yok. Hamle sayacı beyaz hap, kurtarılan parçalar gözlü halkalar, tuş ipuçları beyaz tuş kapakları (`KeyHints`: "[W][A][S][D] hareket" metnini kapaklara çevirir), orta mesaj beyaz konuşma balonu, hedef ikonları içi boş blob çerçeve (`Player/frame_*`). HUD `LevelManager.BuildHud` ile kurulur; Editor'de de çalıştığı için Play'e girmeden önizlenebilir.
+Arayüz de aynı mürekkeple: başlık, sayaç ve tuş kapakları Fredoka Bold, küçük etiketler Fredoka Medium, cümleler Nunito (piksel yazı tipi kaldırıldı), kontur yok. Hamle sayacı beyaz hap, kurtarılan parçalar gözlü halkalar, tuş ipuçları beyaz tuş kapakları (`KeyHints`: "[W][A][S][D] hareket" metnini kapaklara çevirir), orta mesaj beyaz konuşma balonu, hedef ikonları içi boş blob çerçeve (`Player/frame_*`). HUD `LevelManager.BuildHud` ile kurulur; Editor'de de çalıştığı için Play'e girmeden önizlenebilir.
 
 - **Yuva:** kesintisiz çerçeve. Şekil uymuyorsa soluk gri, uyunca parlak beyaz olur ve nabız gibi parlayan bir ışık açılır.
 - **Duvarlar:** 16 autotile (`wall_LRUD`), dış köşeler yuvarlak. Bazı duvarlarda temaya özel küçük bir işaret var (`wallm_`). İç köşeleri `Common/fillet_*` dolguları yuvarlatır.
 - **Işık:** `ThemeManager > Monochrome` açıkken ışıklar beyaz, kamera arka planı siyah. Gece temasının karanlığı korunur. Kapatırsanız temaların renkli ışıkları geri gelir.
-- Harita görselleri `Tools/art_doodle.py`, karakterler ve hikâye ekranları `Tools/art_blob.py` ile üretilir: `python3 Tools/art_blob.py .` (kontrol tablosu için `--sheet yol`). Renkli eski hâller git geçmişinde duruyor. Bölüm 2 görselleri henüz renkli.
+- Harita görselleri `Tools/art_doodle.py`, karakterler ve hikâye ekranları `Tools/art_blob.py` ile üretilir: `python3 Tools/art_blob.py .` (kontrol tablosu için `--sheet yol`). Renkli eski hâller git geçmişinde duruyor. Yamalı bölümü de aynı üreticiden çıkar; eski Yama Korsanları sahnesinin (`Art/B2`) görselleri renkli kaldı, o sahne oyunda değil.
 
 ## Kayıp parçalar ve 4 son
 
@@ -76,7 +76,16 @@ Arayüz de aynı mürekkeple: tek yazı tipi Nunito (piksel yazı tipi kaldırı
 | Binici Yerine Oturdu | En az 4 parça + Yamalı çöpe |
 | Gerçek son: Kimse Eksik Kalmasın | En az 4 parça + Yamalı kendi kutusuna |
 
-## Bölüm 2: Yama Korsanları (gerçek zamanlı)
+## Bölüm 2: Yamalı'nın İntikamı (platform)
+
+Ayrı sahne: `Assets/Scenes/Yamali.unity`, kod `Scripts/KayipParca/Yamali/YamaliGame.cs`, seviyeler `Resources/KayipParca/Yamali/yamali1..8.txt`, metinler `Story/yamali.txt`. Bu kez Yamalı'yı oynarsın: çöp kutusundan çıkıp evde kaybolmuş yama parçalarını toplar, ordu kurar ve resme döner. Finalde Yamalı'nın ordusu ile Şapkalı'nın (Bölüm 1'de kurtardığı) parçaları karşılaşır; üç son vardır.
+
+- **A / D:** yürü. **Boşluk:** zıpla (basılı tut, daha yükseğe). **S:** tek yönlü platformdan in. **R:** yeniden.
+- Görseller blob stilinde ve 2x (`Tools/art_blob.py`, `Art/Yamali`, `Story/y_*`): Yamalı ters renkli blob + beyaz tombul bacaklar, silgi bekçisi, yuvarlak uçlu dikenler, tek yönlü platform, asansör, yay, bayrak, çıkış kapısı. Duvarlar Bölüm 1 temalarının doodle karolarıdır.
+- HUD Bölüm 1 ile aynı dil: sol üstte bölüm + seviye adı, sağ üstte "Yama ordusu" halkaları (toplanan yama = siyah gövdeli beyaz gözlü top), altta ipucu ve tuş kapakları, seviye girişinde siyah perde.
+- `Tools/art_yamali.py` eski doodle üreticidir, artık kullanılmıyor (üzerine yazmamak için çalıştırmayın).
+
+## Eski Bölüm 2: Yama Korsanları (gerçek zamanlı, oyundan çıkarıldı)
 
 Ayrı bir sahne: `Assets/Scenes/Bolum2.unity`. Sahne otomatik kurulur, kurulmazsa menüden **Kayıp Parça > 5) Bölüm 2 Sahnesini Kur**'a basın. Bölüm 1 bitince oyun bu sahneye kendiliğinden geçer. Doğrudan test etmek için Bolum2 sahnesini açıp Play'e basın. `Bolum2 > Start At` ile istediğiniz dalgadan ya da doğrudan boss'tan başlayabilirsiniz.
 

@@ -62,7 +62,7 @@ namespace KayipParca
         const string CraneControls = "[W][A][S][D] kancayı sür    [Boşluk] tut / bırak    [Z] geri al    [R] yeniden";
 
         // HUD yerlesimi (1920x1080 tuval birimi). Kamera tahtayi bu bantlarin arasina sigdirir.
-        const float HudTop = 24f, IconSize = 96f, IconLabel = 32f, IconGap = 26f, MovesWidth = 300f;
+        const float HudTop = 24f, IconSize = 96f, IconLabel = 32f, IconGap = 26f, MovesWidth = 300f, PillWidth = 236f;
         const float TopReserve = HudTop + IconSize + IconLabel + 18f;   // ust bant: baslik, hamle, sekil ikonlari
         const float BottomReserve = 128f;                               // alt bant: ipucu + kontroller
 
@@ -252,23 +252,23 @@ namespace KayipParca
             if (title)
             {
                 // iki satir: ustte kucuk gri bolum adi, altta seviye adi (zengin metin, LoadLevel yazar)
-                UIKit.Style(title, UIKit.Hud, 46, TextAnchor.MiddleLeft);
+                UIKit.Style(title, UIKit.Hud, 54, TextAnchor.MiddleLeft);
                 UIKit.TopBand(title.rectTransform, UIKit.Margin, right + 30, HudTop, IconSize);
             }
             if (moves)
             {
-                UIKit.Style(moves, UIKit.Hud, 44, TextAnchor.MiddleCenter);
+                UIKit.Style(moves, UIKit.Hud, 56, TextAnchor.MiddleCenter);
                 moves.horizontalOverflow = HorizontalWrapMode.Overflow;
                 PlaceMoves(moves, iconCount);
             }
             if (message)
             {
                 UIKit.Style(message, UIKit.Body, 60, TextAnchor.MiddleCenter);
-                UIKit.Stretch(message.rectTransform, .08f, .2f, .92f, .8f);
+                UIKit.Stretch(message.rectTransform, .17f, .2f, .83f, .8f);   // sabit 1300 birimlik balonun icinde sarar
             }
             if (hint)
             {
-                UIKit.Style(hint, UIKit.Body, 28, TextAnchor.LowerCenter);
+                UIKit.Style(hint, UIKit.Body, 30, TextAnchor.LowerCenter);
                 UIKit.BottomBand(hint.rectTransform, 80, 80, 68, BottomReserve - 74);
             }
         }
@@ -276,7 +276,7 @@ namespace KayipParca
         static float MovesBlockWidth(int iconCount) => MovesWidth + iconCount * (IconSize + IconGap);
 
         static void PlaceMoves(Text moves, int iconCount) =>
-            UIKit.Pin(moves.rectTransform, new Vector2(1, 1), new Vector2(-UIKit.Margin - iconCount * (IconSize + IconGap), -HudTop), new Vector2(moves.rectTransform.sizeDelta.x > 0 ? moves.rectTransform.sizeDelta.x : MovesWidth, IconSize));
+            UIKit.Pin(moves.rectTransform, new Vector2(1, 1), new Vector2(-UIKit.Margin - iconCount * (IconSize + IconGap), -HudTop), new Vector2(PillWidth, IconSize));
 
         /// Sag ust blok: hamle hapi ve altindaki kurtarilan satiri, gorunen ikon sayisina gore sola kayar.
         static void PlaceRight(Text moves, RectTransform rescued, int iconCount)
@@ -312,7 +312,7 @@ namespace KayipParca
 
         /// Baslik metni: ustte kucuk gri bolum adi, altta seviye adi.
         public static string TitleText(string chapter, int number, string name) =>
-            $"<size=24><color=#999999>{Upper(chapter)}</color></size>\n{number}. {name}";
+            $"<size=26><color=#999999>{Upper(chapter).Replace(":", " ·")}</color></size>\n{number}. {name}";
 
         /// Calisma aninda uretilen HUD parcalari (sahnedeki dort metnin yanina).
         public class HudWidgets
@@ -327,11 +327,11 @@ namespace KayipParca
             LayoutHudTexts(title, moves, message, hint);
             // orta mesaj: beyaz konusma balonu, siyah yazi (blob stili)
             if (message && !message.transform.parent.Find(message.name + "_Zemin"))
-                UIKit.SetCorner(UIKit.AddBackdrop(message, Color.white, UIKit.BackdropPad), 48);
+                UIKit.SetCorner(UIKit.AddBackdrop(message, Color.white, UIKit.BackdropPad, new Vector2(1300, 240)), 48);
             if (message) message.color = Color.black;
-            // hamle sayaci: beyaz hap, siyah rakam (genisligi UpdateHud yaziya gore ayarlar)
+            // hamle sayaci: sabit boyutlu beyaz hap, siyah rakam (rakam degisince hap oynamaz)
             if (moves && !moves.transform.parent.Find(moves.name + "_Zemin"))
-                UIKit.SetCorner(UIKit.AddBackdrop(moves, Color.white, new Vector2(26, 12)), IconSize / 2);
+                UIKit.SetCorner(UIKit.AddBackdrop(moves, Color.white, Vector2.zero, new Vector2(PillWidth, IconSize)), IconSize / 2);
             if (moves) moves.color = Color.black;
             var canvasText = moves ? moves : title ? title : message;
             if (!canvasText) return null;
@@ -769,9 +769,7 @@ namespace KayipParca
             }
             if (movesText)
             {
-                movesText.text = $"{s.moves} <size=26>hamle</size>";
-                // hap yaziya gore daralir/genisler (TextBackdrop zemini bu kutuya oturtur)
-                movesText.rectTransform.sizeDelta = new Vector2(movesText.preferredWidth + 6, IconSize);
+                movesText.text = $"{s.moves} <size=28>hamle</size>";
                 UpdateRescuedRow(LostTotal(), RescuedCount());
             }
             if (hudNow) hudNow.sprite = SpriteBank.Get($"Player/body_{s.ps}");

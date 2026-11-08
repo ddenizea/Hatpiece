@@ -94,9 +94,8 @@ namespace KayipParca
         float trailT;
 
         // arayuz
-        Font font;
-        Text levelText, armyText, hintText, msgText;
-        Image armyIcon;
+        Text levelText, hintText, msgText, controlsText;
+        RectTransform armyRow; int armyShown = -1;
         GameObject overlay; Text overlayTitle, overlayBody, overlayPrompt;
         GameObject screenRoot; Image screenPic; Text screenText, screenPrompt;
         bool inScreen, screenNext, screenSkip, waitOverlay;
@@ -218,11 +217,11 @@ namespace KayipParca
         IEnumerator Finale()
         {
             int hero = RescuedCount(), army = yama.Count;
-            string score = $"Kalbin kurtardığı parçalar: {hero}    ·    Yama ordusu: {army}";
-            yield return ShowScreen("Story/y_war", T("WAR", "Yamalı ordusuyla resmin önüne vardı. Kalp de kurtardığı parçalarla bekliyordu.") + "||" + score, "[Enter] devam");
+            string score = $"Şapkalı'nın kurtardığı parçalar: {hero}    ·    Yama ordusu: {army}";
+            yield return ShowScreen("Story/y_war", T("WAR", "Yamalı ordusuyla resmin önüne vardı. Şapkalı da kurtardığı parçalarla bekliyordu.") + "||" + score, "[Enter] devam");
             string img, body;
-            if (army > hero) { img = "Story/y_end_yama"; body = T("END_YAMA", "Yama ordusu daha kalabalıktı. Yamalı ejderhanın kalbine yeniden oturdu."); }
-            else if (hero > army) { img = "Story/y_end_hero"; body = T("END_HERO", "Kalbin arkasında daha çok parça vardı. Yamalı'nın ordusu dağıldı."); }
+            if (army > hero) { img = "Story/y_end_yama"; body = T("END_YAMA", "Yama ordusu daha kalabalıktı. Yamalı ejderhanın eyerine yeniden oturdu."); }
+            else if (hero > army) { img = "Story/y_end_hero"; body = T("END_HERO", "Şapkalı'nın arkasında daha çok parça vardı. Yamalı'nın ordusu dağıldı."); }
             else { img = "Story/y_end_both"; body = T("END_BOTH", "İki ordu eşitti. Çarpıştılar ve ikisi birlikte masadan düştü."); }
             yield return ShowScreen(img, body + "||" + score, "[Enter] devam");
             yield return ShowScreen("Story/title", T("THANKS", "HATPIECE|Oynadığın için teşekkürler!"), "[Enter] başlık ekranı");
@@ -339,7 +338,7 @@ namespace KayipParca
                 var a = MakeSprite("YamaAskeri", "Enemies/ugly_" + (k % 4), spawn, 4);
                 a.transform.localScale = Vector3.one * .62f; army.Add(a);
             }
-            if (levelText) levelText.text = $"Bölüm 2 · {levelIndex}. {L.name}";
+            if (levelText) levelText.text = LevelManager.TitleText(ChapterName, levelIndex, L.name);
             if (hintText) hintText.text = string.IsNullOrEmpty(L.hint) ? T("HINT", "A / D: yürü    Boşluk: zıpla    S: platformdan in    R: yeniden") : L.hint;
             UpdateArmyHud();
             SnapCamera();
@@ -772,37 +771,60 @@ namespace KayipParca
             }
         }
 
-        // ------------------------------------------------------------------ arayuz
+        // ------------------------------------------------------------------ arayuz (Bolum 1 ile ayni dil: UIKit, blob stili)
+        const string ChapterName = "Bölüm 2: Yamalı'nın İntikamı";
+
         void SetupUI()
         {
-            font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            var cgo = new GameObject("UI", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-            var canvas = cgo.GetComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            var sc = cgo.GetComponent<CanvasScaler>(); sc.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            sc.referenceResolution = new Vector2(1920, 1080); sc.matchWidthOrHeight = .5f;
-            var root = cgo.transform;
-            armyIcon = UIImage(root, "OrduIkon", new Vector2(0, 1), new Vector2(30, -24), new Vector2(64, 64), Color.white);
-            armyIcon.sprite = SpriteBank.Get("Enemies/ugly_0"); armyIcon.preserveAspect = true;
-            armyText = UIText(root, "Ordu", new Vector2(0, 1), new Vector2(104, -36), new Vector2(600, 50), 32, TextAnchor.UpperLeft);
-            levelText = UIText(root, "Seviye", new Vector2(.5f, 1), new Vector2(-600, -30), new Vector2(1200, 50), 30, TextAnchor.UpperCenter);
-            msgText = UIText(root, "Mesaj", new Vector2(.5f, .5f), new Vector2(-800, 260), new Vector2(1600, 300), 48, TextAnchor.MiddleCenter);
-            hintText = UIText(root, "Ipucu", new Vector2(.5f, 0), new Vector2(-900, 70), new Vector2(1800, 50), 26, TextAnchor.LowerCenter);
-            hintText.color = new Color(1, 1, 1, .75f);
-
-            overlay = new GameObject("SeviyeGirisi", typeof(RectTransform), typeof(Image));
-            overlay.transform.SetParent(root, false);
+            var root = UIKit.MakeCanvas("UI").transform;
+            // sol ust: bolum adi + seviye adi
+            levelText = UIKit.MakeText(root, "Baslik", UIKit.Hud, 54, TextAnchor.MiddleLeft);
+            UIKit.TopBand(levelText.rectTransform, UIKit.Margin, 700, 24, 96);
+            // sag ust: yama ordusu halkalari (UpdateArmyHud doldurur)
+            armyRow = UIKit.MakeRect(root, "OrduSatiri");
+            UIKit.Pin(armyRow, new Vector2(1, 1), new Vector2(-UIKit.Margin, -44), new Vector2(640, 40));
+            var row = armyRow.gameObject.AddComponent<HorizontalLayoutGroup>();
+            row.childAlignment = TextAnchor.MiddleRight; row.spacing = 10;
+            row.childControlWidth = row.childControlHeight = false; row.childForceExpandWidth = row.childForceExpandHeight = false;
+            // orta mesaj: beyaz konusma balonu, siyah yazi
+            msgText = UIKit.MakeText(root, "Mesaj", UIKit.Body, 48, TextAnchor.MiddleCenter);
+            UIKit.Stretch(msgText.rectTransform, .17f, .42f, .83f, .74f);
+            UIKit.SetCorner(UIKit.AddBackdrop(msgText, Color.white, UIKit.BackdropPad, new Vector2(1300, 200)), 48);
+            msgText.color = Color.black;
+            // alt: seviye ipucu, altinda tus kapaklari
+            hintText = UIKit.MakeText(root, "Ipucu", UIKit.Body, 30, TextAnchor.LowerCenter);
+            UIKit.BottomBand(hintText.rectTransform, 80, 80, 68, 54);
+            controlsText = UIKit.MakeText(root, "Kontroller", UIKit.BodyLight, 26, TextAnchor.MiddleCenter);
+            UIKit.BottomBand(controlsText.rectTransform, 80, 80, 16, 46);
+            UIKit.AddKeyHints(controlsText);
+            controlsText.text = T("HINT", "[A][D] yürü    [Boşluk] zıpla    [S] platformdan in    [R] yeniden");
+            // seviye girisi: siyah perde, baslik, hikaye, tus kapagi
+            var ov = UIKit.MakeImage(root, "SeviyeGirisi", new Color(0, 0, 0, .9f));
+            ov.raycastTarget = true; overlay = ov.gameObject;
             Stretch((RectTransform)overlay.transform, 0, 0, 1, 1);
-            overlay.GetComponent<Image>().color = new Color(0, 0, 0, .78f);
-            overlayTitle = UIText(overlay.transform, "Baslik", Vector2.zero, Vector2.zero, Vector2.zero, 64, TextAnchor.LowerCenter);
+            overlayTitle = UIKit.MakeText(overlay.transform, "Baslik", UIKit.Hud, 64, TextAnchor.LowerCenter);
             Stretch(overlayTitle.rectTransform, .1f, .56f, .9f, .75f);
-            overlayBody = UIText(overlay.transform, "Hikaye", Vector2.zero, Vector2.zero, Vector2.zero, 36, TextAnchor.UpperCenter);
+            overlayBody = UIKit.MakeText(overlay.transform, "Hikaye", UIKit.Body, 36, TextAnchor.UpperCenter);
             Stretch(overlayBody.rectTransform, .15f, .3f, .85f, .54f);
-            overlayPrompt = UIText(overlay.transform, "Tus", Vector2.zero, Vector2.zero, Vector2.zero, 28, TextAnchor.MiddleCenter);
+            overlayPrompt = UIKit.MakeText(overlay.transform, "Tus", UIKit.BodyLight, 26, TextAnchor.MiddleCenter);
             Stretch(overlayPrompt.rectTransform, .1f, .18f, .9f, .26f);
+            UIKit.AddKeyHints(overlayPrompt);
             overlay.SetActive(false);
+            UpdateArmyHud();
         }
 
-        void UpdateArmyHud() { if (armyText) armyText.text = $"Yama ordusu: {yama.Count}/6"; }
+        /// Sag ust: "Yama ordusu" + 6 halka; toplanan her yama siyah govdeli, beyaz gozlu bir top olur.
+        void UpdateArmyHud()
+        {
+            if (!armyRow || armyShown == yama.Count) return;
+            armyShown = yama.Count;
+            for (int i = armyRow.childCount - 1; i >= 0; i--) Destroy(armyRow.GetChild(i).gameObject);
+            var label = UIKit.MakeText(armyRow, "Etiket", UIKit.HudLight, 24, TextAnchor.MiddleRight);
+            label.color = UIKit.Mute; label.horizontalOverflow = HorizontalWrapMode.Overflow;
+            label.text = "Yama ordusu";
+            label.rectTransform.sizeDelta = new Vector2(label.preferredWidth + 10, 32);
+            for (int i = 0; i < 6; i++) UIKit.MakeDot(armyRow, i < yama.Count, 26, inverted: true);
+        }
 
         void ShowOverlay(string title, string body, string prompt)
         {
@@ -811,32 +833,6 @@ namespace KayipParca
         }
 
         void HideOverlay() { overlay.SetActive(false); }
-
-        Image UIImage(Transform parent, string n, Vector2 anchor, Vector2 p, Vector2 size, Color col)
-        {
-            var go = new GameObject(n, typeof(RectTransform), typeof(Image));
-            go.transform.SetParent(parent, false);
-            var rt = (RectTransform)go.transform;
-            rt.anchorMin = rt.anchorMax = anchor; rt.pivot = new Vector2(0, 1);
-            rt.anchoredPosition = p; rt.sizeDelta = size;
-            var img = go.GetComponent<Image>(); img.color = col;
-            return img;
-        }
-
-        Text UIText(Transform parent, string n, Vector2 anchor, Vector2 p, Vector2 size, int fs, TextAnchor align)
-        {
-            var go = new GameObject(n, typeof(RectTransform), typeof(Text));
-            go.transform.SetParent(parent, false);
-            var rt = (RectTransform)go.transform;
-            rt.anchorMin = rt.anchorMax = anchor; rt.pivot = new Vector2(0, 1);
-            rt.anchoredPosition = p; rt.sizeDelta = size;
-            var t = go.GetComponent<Text>();
-            t.font = font; t.fontSize = fs; t.alignment = align; t.color = Color.white; t.fontStyle = FontStyle.Bold;
-            t.supportRichText = true;
-            t.horizontalOverflow = HorizontalWrapMode.Wrap; t.verticalOverflow = VerticalWrapMode.Overflow;
-            var o = go.AddComponent<Outline>(); o.effectColor = new Color(0, 0, 0, .9f); o.effectDistance = new Vector2(3, -3);
-            return t;
-        }
 
         static void Stretch(RectTransform rt, float x0, float y0, float x1, float y1)
         {
@@ -866,20 +862,7 @@ namespace KayipParca
         void EnsureScreen()
         {
             if (screenRoot) return;
-            var canvas = msgText.canvas.transform;
-            screenRoot = new GameObject("HikayeEkrani", typeof(RectTransform), typeof(Image));
-            screenRoot.transform.SetParent(canvas, false);
-            Stretch((RectTransform)screenRoot.transform, 0, 0, 1, 1);
-            screenRoot.GetComponent<Image>().color = Color.black;
-            var pic = new GameObject("Resim", typeof(RectTransform), typeof(Image));
-            pic.transform.SetParent(screenRoot.transform, false);
-            Stretch((RectTransform)pic.transform, .08f, .3f, .92f, .97f);
-            screenPic = pic.GetComponent<Image>(); screenPic.preserveAspect = true;
-            screenText = UIText(screenRoot.transform, "Yazi", Vector2.zero, Vector2.zero, Vector2.zero, 40, TextAnchor.MiddleCenter);
-            Stretch(screenText.rectTransform, .08f, .08f, .92f, .29f);
-            screenPrompt = UIText(screenRoot.transform, "Ipucu", Vector2.zero, Vector2.zero, Vector2.zero, 24, TextAnchor.MiddleCenter);
-            Stretch(screenPrompt.rectTransform, .08f, .01f, .92f, .08f);
-            screenPrompt.color = new Color(.75f, .75f, .75f);
+            screenRoot = UIKit.MakeStoryScreen(msgText.canvas.transform, out screenPic, out screenText, out screenPrompt);
         }
 
         // ------------------------------------------------------------------ hileler

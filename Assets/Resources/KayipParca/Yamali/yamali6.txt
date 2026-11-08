@@ -1,6 +1,6 @@
 NAME=Kutunun Dibi
 THEME=0
-STORY=Yapbozun kutusu. Her şeyin başladığı yer.|Kalpçik buradan çıkmıştı; ben de buradan ordumu toplayacağım.
+STORY=Yapbozun kutusu. Her şeyin başladığı yer.|Şapkalı buradan çıkmıştı; ben de buradan ordumu toplayacağım.
 HINT=Bayrağa dokun, sonra riskli yollara gir.
 OUTRO=Kutunun kapağı açık. Masa çok yakın.
 MAP
