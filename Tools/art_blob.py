@@ -166,14 +166,19 @@ def piece_img(bits, px, face='idle', hat=False, fill=W, inverted=False, outline=
 
 
 def yamali_img(px, face=True):
+    """Yamali: ters renkli parca ('1011'), sag gozunde korsan bandi (B varyanti: siyah kare bant, kalin beyaz kenar,
+    kafayi capraz dolasan ip)."""
     def extra(px, oy):
         k = px / 100
-        w = Ink(px, px); w.rrect(52 * k, (35 + oy / k) * k, 70 * k, (51 + oy / k) * k, 5 * k)    # goz bandi
-        w.line([(28 * k, oy + 36 * k), (50 * k, oy + 31 * k)], 3 * k)                         # bandin ipi
-        w.line([(70 * k, oy + 36 * k), (74 * k, oy + 33 * k)], 3 * k)
-        if face: w.circle(40 * k, oy + 49 * k, 5.2 * k)                                      # acik goz
-        p = Ink(px, px); p.circle(61 * k, oy + 43 * k, 3 * k)                                # band uzerindeki nokta
-        return [(w, W), (p, K)]
+        layers = []
+        if face:
+            eye = Ink(px, px); eye.circle(40 * k, oy + 49 * k, 5.2 * k); layers.append((eye, W))        # acik goz
+        rim = Ink(px, px)
+        rim.rrect(50 * k, oy + 34 * k, 72 * k, oy + 52 * k, 5 * k)                                      # bandin beyaz kenari
+        rim.line([(24 * k, oy + 30 * k), (50 * k, oy + 37 * k)], 3.2 * k)                               # ip (sol)
+        rim.line([(72 * k, oy + 39 * k), (80 * k, oy + 33 * k)], 3.2 * k)                               # ip (sag)
+        pad = Ink(px, px); pad.rrect(53.5 * k, oy + 37.5 * k, 68.5 * k, oy + 48.5 * k, 3.5 * k)        # siyah bant
+        return layers + [(rim, W), (pad, K)]
     return piece_img('1011', px, face=None, inverted=True, extra=extra)
 
 
@@ -429,8 +434,8 @@ def make_story():
     save(scene([(sleeping, 160, 60), (piece_img('1001', 70 * Z, face='sad', fill=G), 40, 280), (piece_img('0110', 60 * Z, face='sad', fill=G), 100, 292)], grid=True), 'Story', 'ending_alone.png')
     def dark_extra(px, oy):
         k = px / 100
-        w = Ink(px, px); w.rrect(52 * k, 35 * k, 70 * k, 51 * k, 5 * k); w.line([(28 * k, 36 * k), (50 * k, 31 * k)], 3 * k)
-        pp = Ink(px, px); pp.circle(61 * k, 43 * k, 3 * k)
+        w = Ink(px, px); w.rrect(50 * k, 34 * k, 72 * k, 52 * k, 5 * k); w.line([(24 * k, 30 * k), (50 * k, 37 * k)], 3.2 * k); w.line([(72 * k, 39 * k), (80 * k, 33 * k)], 3.2 * k)
+        pp = Ink(px, px); pp.rrect(53.5 * k, 37.5 * k, 68.5 * k, 48.5 * k, 3.5 * k)   # olusan goz bandi (B)
         sp2 = Ink(px, px)
         for a in range(0, 360, 45):
             sp2.line([(40 * k + 7 * k * math.cos(math.radians(a)), 49 * k + 7 * k * math.sin(math.radians(a))), (40 * k + 11 * k * math.cos(math.radians(a)), 49 * k + 11 * k * math.sin(math.radians(a)))], 2 * k)
