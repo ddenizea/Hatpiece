@@ -786,10 +786,10 @@ namespace KayipParca
             var row = armyRow.gameObject.AddComponent<HorizontalLayoutGroup>();
             row.childAlignment = TextAnchor.MiddleRight; row.spacing = 10;
             row.childControlWidth = row.childControlHeight = false; row.childForceExpandWidth = row.childForceExpandHeight = false;
-            // orta mesaj: beyaz konusma balonu, siyah yazi
+            // orta mesaj: yari saydam gecisli beyaz konusma balonu, siyah yazi
             msgText = UIKit.MakeText(root, "Mesaj", UIKit.Body, 48, TextAnchor.MiddleCenter);
             UIKit.Stretch(msgText.rectTransform, .17f, .42f, .83f, .74f);
-            UIKit.SetCorner(UIKit.AddBackdrop(msgText, Color.white, UIKit.BackdropPad, new Vector2(1300, 200)), 48);
+            UIKit.AddBubble(msgText);   // yaziya gore boyutlanir
             msgText.color = Color.black;
             // alt: seviye ipucu, altinda tus kapaklari
             hintText = UIKit.MakeText(root, "Ipucu", UIKit.Body, 30, TextAnchor.LowerCenter);

@@ -18,6 +18,10 @@ namespace KayipParca
         /// Ikincil yazilar (etiketler, tus aciklamalari): siyah zemin ustunde gri.
         public static readonly Color Mute = new Color(.6f, .6f, .6f);
         public static readonly Color BackdropColor = new Color(0, 0, 0, .62f);
+        /// Mesaj balonu rengi (ust / alt). Balon artik tahtanin altinda durdugu icin opak beyaz;
+        /// alfa ya da ton degistirilerek dikey gecis verilebilir (UIGradient bu iki rengi harmanlar).
+        public static readonly Color BubbleTop = Color.white;
+        public static readonly Color BubbleBottom = Color.white;
         public static readonly Vector2 BackdropPad = new Vector2(44, 20);
 
         public static Font DefaultFont => Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
@@ -270,6 +274,36 @@ namespace KayipParca
                 rounded = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(.5f, .5f), 100, 0, SpriteMeshType.FullRect, new Vector4(r, r, r, r));
                 return rounded;
             }
+        }
+
+        /// Grafige dikey renk gecisi ekler (ust -> alt). Image.color ile carpilir; balon icin Color.white verin.
+        public static UIGradient AddGradient(Graphic g, Color top, Color bottom)
+        {
+            var grad = g.GetComponent<UIGradient>();
+            if (!grad) grad = g.gameObject.AddComponent<UIGradient>();
+            grad.Set(top, bottom);
+            return grad;
+        }
+
+        /// Metnin arkasina blob stili konusma balonu: yuvarlak koseli, yari saydam beyaz gecisli zemin.
+        /// fixedSize verilmezse balon yaziya gore boyutlanir (kisa mesajda kucuk hap, uzun mesajda genis balon).
+        /// Metnin zaten bir zemini varsa (sahneye kaydedilmis olabilir) onu yeniden kurmaz, ayarlarini gunceller.
+        public static Image AddBubble(Text t, Vector2 fixedSize = default, float corner = 40)
+        {
+            var old = t.transform.parent.Find(t.name + "_Zemin");
+            Image bg;
+            if (old && old.GetComponent<TextBackdrop>())
+            {
+                bg = old.GetComponent<Image>();
+                bg.color = Color.white; bg.sprite = RoundedSprite; bg.type = Image.Type.Sliced;
+                var fit = old.GetComponent<TextBackdrop>();
+                fit.text = t; fit.pad = BackdropPad; fit.fixedSize = fixedSize;
+                fit.Refresh();
+            }
+            else bg = AddBackdrop(t, Color.white, BackdropPad, fixedSize);
+            SetCorner(bg, corner);
+            AddGradient(bg, BubbleTop, BubbleBottom);
+            return bg;
         }
 
         public static Image MakePanel(Transform parent, string name, Color col)

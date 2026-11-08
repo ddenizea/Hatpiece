@@ -64,7 +64,9 @@ namespace KayipParca
         // HUD yerlesimi (1920x1080 tuval birimi). Kamera tahtayi bu bantlarin arasina sigdirir.
         const float HudTop = 24f, IconSize = 96f, IconLabel = 32f, IconGap = 26f, MovesWidth = 300f, PillWidth = 236f;
         const float TopReserve = HudTop + IconSize + IconLabel + 18f;   // ust bant: baslik, hamle, sekil ikonlari
-        const float BottomReserve = 128f;                               // alt bant: ipucu + kontroller
+        const float HintReserve = 128f;                                 // ipucu + kontroller
+        const float MessageHeight = 140f, MessageGap = 36f;             // orta mesaj seridi: ipucunun ustunde
+        const float BottomReserve = HintReserve + MessageGap + MessageHeight;   // alt bant: mesaj + ipucu + kontroller
 
         enum Death { None, Hazard, Enemy, Laser, Fire, Moves }
 
@@ -163,6 +165,7 @@ namespace KayipParca
             if (a < 0) return;
             if (inScreen) { if (a == 8) screenNext = true; if (a == 10) screenSkip = true; return; }
             if (busy) return;
+            if (introShowing && a != 10) { introShowing = false; ShowMessage(""); }   // ilk hamlede seviye yazisi kalkar
             if (a <= 5 || a == 8) Step(a);
             else if (a == 6) Undo();
             else if (a == 7) { Play(sfxBump); ResetState(); }
@@ -263,13 +266,14 @@ namespace KayipParca
             }
             if (message)
             {
-                UIKit.Style(message, UIKit.Body, 60, TextAnchor.MiddleCenter);
-                UIKit.Stretch(message.rectTransform, .17f, .2f, .83f, .8f);   // sabit 1300 birimlik balonun icinde sarar
+                // tahtanin altinda, ipucunun ustunde yatay serit; balon yaziya gore boyutlanir (tahtayi ortmez)
+                UIKit.Style(message, UIKit.Body, 40, TextAnchor.MiddleCenter);
+                UIKit.BottomBand(message.rectTransform, 200, 200, HintReserve + MessageGap, MessageHeight);
             }
             if (hint)
             {
                 UIKit.Style(hint, UIKit.Body, 30, TextAnchor.LowerCenter);
-                UIKit.BottomBand(hint.rectTransform, 80, 80, 68, BottomReserve - 74);
+                UIKit.BottomBand(hint.rectTransform, 80, 80, 68, HintReserve - 74);
             }
         }
 
@@ -325,9 +329,8 @@ namespace KayipParca
         public static HudWidgets BuildHud(Text title, Text moves, Text message, Text hint)
         {
             LayoutHudTexts(title, moves, message, hint);
-            // orta mesaj: beyaz konusma balonu, siyah yazi (blob stili)
-            if (message && !message.transform.parent.Find(message.name + "_Zemin"))
-                UIKit.SetCorner(UIKit.AddBackdrop(message, Color.white, UIKit.BackdropPad, new Vector2(1300, 240)), 48);
+            // mesaj: yaziya gore boyutlanan yari saydam gecisli beyaz balon, siyah yazi (blob stili)
+            if (message) UIKit.AddBubble(message);
             if (message) message.color = Color.black;
             // hamle sayaci: sabit boyutlu beyaz hap, siyah rakam (rakam degisince hap oynamaz)
             if (moves && !moves.transform.parent.Find(moves.name + "_Zemin"))
@@ -371,6 +374,12 @@ namespace KayipParca
         }
 
         // ------------------------------------------------------------------ seviye yukleme
+        /// Seviye adi + hikaye balonunun (gecis bittikten sonra) en fazla ekranda kalma suresi; ilk hamlede hemen kalkar.
+        const float IntroHold = 2.5f;
+        bool introShowing;
+        /// Kazaninca outro metninin ekranda kalma suresi.
+        const float OutroHold = 1.6f;
+
         IEnumerator LoadLevel(int i)
         {
             busy = true;
@@ -379,11 +388,12 @@ namespace KayipParca
             if (!firstLoad && themes) yield return themes.FadeOut();
             firstLoad = false;
             Build(i);
-            ShowMessage($"{LevelNumber()}. {data.name}" + (string.IsNullOrEmpty(data.story) ? "" : "\n<size=34>" + data.story + "</size>"));
+            ShowMessage($"{LevelNumber()}. {data.name}" + (string.IsNullOrEmpty(data.story) ? "" : "\n<size=30>" + data.story + "</size>"));
+            introShowing = true;
             if (themes) yield return themes.FadeIn(data.theme);
             busy = false;
-            yield return new WaitForSeconds(1.6f);
-            if (!busy && !inScreen && index == i) ShowMessage("");
+            for (float t = 0; t < IntroHold && introShowing && index == i; t += Time.deltaTime) yield return null;
+            if (introShowing && !busy && !inScreen && index == i) { introShowing = false; ShowMessage(""); }
         }
 
         int LevelNumber()
@@ -885,7 +895,7 @@ namespace KayipParca
             bool saved = data.hasLost && s.following;
             if (saved) { rescued.Add(entries[index].file); SaveRescued(); ApplyVisuals(snap: false); }
             ShowMessage("Tık!" + (saved ? "\n<size=34>Kayıp parçayı kurtardın!</size>" : "") + (string.IsNullOrEmpty(data.outro) ? "" : "\n<size=34>" + data.outro + "</size>"));
-            yield return new WaitForSeconds(string.IsNullOrEmpty(data.outro) ? 0.8f : 2.6f);
+            yield return new WaitForSeconds(string.IsNullOrEmpty(data.outro) ? 0.6f : OutroHold);
 
             PickEnding(out string endText, out string endImg);
             bool hasEnding = endText != null;

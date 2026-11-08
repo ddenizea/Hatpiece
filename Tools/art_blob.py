@@ -273,11 +273,9 @@ def dragon_side(kind, k=1.0, rider=None, seat=False, seat_rect=(108, 64, 130, 78
         t = i / 6; x = 60 + 60 * t; y = 110 - 10 * 4 * t * (1 - t)
         ink.circle(x * k, y * k, 2.2 * k)
     if kind == 'awake':
-        ink.circle(*T(52, 60), 4 * k); ink.line([T(42, 50), T(62, 54)], 2.6 * k)
-        ink.poly([T(18, 80), T(50, 80), T(34, 88)])
+        ink.circle(*T(54, 60), 4.5 * k)                       # acik goz; yuz basliktakiyle ayni, sadece uyanik
     else:
         ink.arc(*T(55, 60), 9 * k, 20, 160, 3.5 * k)
-    if seat and rider is None: ink.rrect(*T(seat_rect[0], seat_rect[1]), *T(seat_rect[2], seat_rect[3]), 5 * k)
     layers = [(body, W), (ink, K)]
     if kind == 'sleep':
         z = Ink(w, h)
@@ -289,6 +287,13 @@ def dragon_side(kind, k=1.0, rider=None, seat=False, seat_rect=(108, 64, 130, 78
         halo = Image.new('L', (w, h), 0)
         halo.paste(rider.split()[3].filter(ImageFilter.MaxFilter(int(2.2 * k) * 2 + 1)), (rx, ry))
         layers.append((halo, K)); layers.append((rider, rx, ry))
+    elif seat:
+        # bos eyer: binicinin yerinde soluk gri, ici bos parca cercevesi (eksik yapboz parcasi)
+        ghost = piece_img('1110', int(52 * k), face=None, outline=True, fill=G)
+        rx, ry = int(120 * k - ghost.width / 2), int(46 * k - ghost.height / 2)
+        halo = Image.new('L', (w, h), 0)
+        halo.paste(ghost.split()[3].filter(ImageFilter.MaxFilter(int(2.2 * k) * 2 + 1)), (rx, ry))
+        layers.append((halo, K)); layers.append((ghost, rx, ry))
     return compose(w, h, layers)
 
 
@@ -337,9 +342,10 @@ def make_common():
     save(yamali_img(PX), 'Common', 'yamali.png')
     # oyun ici ejderha: yandan, 6x4 karo (384x256, PPU 64). Level 8'de dikdortgen 6 genis 4 yuksek; eyer karosu
     # dikdortgenin (3,1) karosu = sirtin ustu. Agiz sol kenarda 1. satirda (ates oradan cikar).
+    # Basliktakiyle birebir ayni cizim (eyer yuvasi cizilmez: kapak / isik / Yamali / yuva karoda ayri). 768x512, PPU 128.
     for kind in ('awake', 'sleep'):
-        side = dragon_side(kind, 1.6, seat=True, seat_rect=(113, 67, 137, 76))
-        canvas_ = Image.new('RGBA', (384, 256), (0, 0, 0, 0)); canvas_.alpha_composite(side, (24, 0))
+        side = dragon_side(kind, 3.2)
+        canvas_ = Image.new('RGBA', (768, 512), (0, 0, 0, 0)); canvas_.alpha_composite(side, (48, 0))
         save(canvas_, 'Common', f'dragon_{kind}.png')
     closed, glow = seat_tiles()
     save(closed, 'Common', 'chest_closed.png'); save(glow, 'Common', 'chest_glow.png')

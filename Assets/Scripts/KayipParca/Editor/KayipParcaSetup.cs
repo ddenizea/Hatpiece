@@ -27,7 +27,7 @@ namespace KayipParca.EditorTools
             string p = assetPath.Replace('\\', '/');
             bool blob = p.Contains("/Art/Player/") || p.Contains("/Art/Enemies/") || p.Contains("/Art/Story/") || p.Contains("/Art/Yamali/") || p.Contains("/Art/Slots/")
                      || System.Array.Exists(BlobCommon, n => p.EndsWith("/Art/Common/" + n + ".png"));
-            ti.spritePixelsPerUnit = blob ? 64 : 32;
+            ti.spritePixelsPerUnit = blob ? (p.Contains("/Art/Common/dragon_") ? 128 : 64) : 32;   // ejderha 768x512 = 6x4 karo
             ti.filterMode = blob ? FilterMode.Bilinear : FilterMode.Point;
             ti.textureCompression = TextureImporterCompression.Uncompressed;
             ti.mipmapEnabled = false;
